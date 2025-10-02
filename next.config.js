@@ -1,10 +1,20 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   experimental: {
-    serverComponentsExternalPackages: ['@prisma/client', 'bcryptjs']
+    serverComponentsExternalPackages: ['@prisma/client']
   },
   images: {
-    domains: ['images.unsplash.com', 'lh3.googleusercontent.com']
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com'
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com'
+      }
+    ]
   }
 }
 

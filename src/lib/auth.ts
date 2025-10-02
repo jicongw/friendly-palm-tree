@@ -2,6 +2,7 @@ import NextAuth from "next-auth"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import GoogleProvider from "next-auth/providers/google"
 import { prisma } from "@/lib/db"
+import "@/lib/env"
 
 export const {
   handlers: { GET, POST },
@@ -12,8 +13,8 @@ export const {
   adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     }),
   ],
   callbacks: {
@@ -21,15 +22,9 @@ export const {
       ...session,
       user: {
         ...session.user,
-        id: token.sub,
+        id: token.sub as string,
       },
     }),
-    jwt: ({ user, token }) => {
-      if (user) {
-        token.uid = user.id;
-      }
-      return token;
-    },
   },
   session: {
     strategy: "jwt",

@@ -21,8 +21,8 @@ Trip Planner is a comprehensive Next.js 15 application for planning and managing
 - `pnpm build` - Build production bundle
 - `pnpm start` - Start production server
 - `pnpm lint` - Run ESLint linting
-- `pnpm db:push` - Push Prisma schema to database
-- `pnpm db:migrate` - Run database migrations
+- `pnpm db:migrate` - Create and run database migrations (development)
+- `pnpm db:migrate:deploy` - Run database migrations (production)
 - `pnpm db:generate` - Generate Prisma client
 - `pnpm db:studio` - Open Prisma Studio database GUI
 

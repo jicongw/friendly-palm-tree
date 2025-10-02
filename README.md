@@ -42,7 +42,7 @@ Edit `.env` with your database URL and OAuth credentials.
 4. Set up the database:
 ```bash
 npx prisma generate
-npx prisma db push
+npx prisma migrate dev --name init
 ```
 
 5. Run the development server:
@@ -58,8 +58,8 @@ Visit [http://localhost:3000](http://localhost:3000) to see the application.
 - `pnpm build` - Build for production
 - `pnpm start` - Start production server
 - `pnpm lint` - Run ESLint
-- `pnpm db:push` - Push schema to database
-- `pnpm db:migrate` - Run database migrations
+- `pnpm db:migrate` - Create and run database migrations (dev)
+- `pnpm db:migrate:deploy` - Run database migrations (production)
 - `pnpm db:generate` - Generate Prisma client
 - `pnpm db:studio` - Open Prisma Studio
 
