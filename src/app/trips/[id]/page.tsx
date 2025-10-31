@@ -33,12 +33,16 @@ import {
 } from "lucide-react"
 import { format } from "date-fns"
 import Link from "next/link"
+import { calculateDestinationDates, formatDateRange } from "@/lib/date-utils"
 
 interface Destination {
   id: string
   name: string
   daysToStay: number
   order: number
+  transportationNotes?: string | null
+  transportationType?: string | null
+  transportationDetails?: string | null
 }
 
 interface Trip {
@@ -152,7 +156,10 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
           destinations: editDestinations.map((d, index) => ({
             name: d.name,
             daysToStay: d.daysToStay,
-            order: index
+            order: index,
+            transportationNotes: d.transportationNotes || null,
+            transportationType: d.transportationType || null,
+            transportationDetails: d.transportationDetails || null
           }))
         })
       })
@@ -223,6 +230,24 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   const updateDestinationDays = (id: string, days: number) => {
     setEditDestinations(editDestinations.map(d =>
       d.id === id ? { ...d, daysToStay: Math.max(1, days) } : d
+    ))
+  }
+
+  const updateDestinationTransportationType = (id: string, type: string) => {
+    setEditDestinations(editDestinations.map(d =>
+      d.id === id ? { ...d, transportationType: type || null } : d
+    ))
+  }
+
+  const updateDestinationTransportationDetails = (id: string, details: string) => {
+    setEditDestinations(editDestinations.map(d =>
+      d.id === id ? { ...d, transportationDetails: details || null } : d
+    ))
+  }
+
+  const updateDestinationTransportationNotes = (id: string, notes: string) => {
+    setEditDestinations(editDestinations.map(d =>
+      d.id === id ? { ...d, transportationNotes: notes || null } : d
     ))
   }
 
@@ -460,66 +485,115 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                         {editDestinations.map((dest, index) => (
                           <div
                             key={dest.id}
-                            className="flex items-center gap-3 p-3 border rounded-lg bg-white"
+                            className="border rounded-lg bg-white p-4 space-y-3"
                           >
-                            <div className="flex flex-col">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => moveDestination(index, 'up')}
-                                disabled={index === 0 || isSaving}
-                                className="h-6 w-6 p-0 hover:bg-gray-100"
-                                title="Move up"
-                              >
-                                <ChevronUpIcon className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => moveDestination(index, 'down')}
-                                disabled={index === editDestinations.length - 1 || isSaving}
-                                className="h-6 w-6 p-0 hover:bg-gray-100"
-                                title="Move down"
-                              >
-                                <ChevronDownIcon className="h-4 w-4" />
-                              </Button>
-                            </div>
-                            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">
-                              {index + 1}
-                            </span>
-                            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
-                              <Input
-                                placeholder="Destination name"
-                                value={dest.name}
-                                onChange={(e) => updateDestinationName(dest.id, e.target.value)}
-                                disabled={isSaving}
-                              />
-                              <div className="flex items-center gap-2">
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  value={dest.daysToStay}
-                                  onChange={(e) => updateDestinationDays(dest.id, parseInt(e.target.value) || 1)}
-                                  className="w-20"
-                                  disabled={isSaving}
-                                />
-                                <span className="text-sm text-muted-foreground whitespace-nowrap">
-                                  day{dest.daysToStay !== 1 ? 's' : ''}
-                                </span>
+                            <div className="flex items-start gap-3">
+                              <div className="flex flex-col">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => moveDestination(index, 'up')}
+                                  disabled={index === 0 || isSaving}
+                                  className="h-6 w-6 p-0 hover:bg-gray-100"
+                                  title="Move up"
+                                >
+                                  <ChevronUpIcon className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => moveDestination(index, 'down')}
+                                  disabled={index === editDestinations.length - 1 || isSaving}
+                                  className="h-6 w-6 p-0 hover:bg-gray-100"
+                                  title="Move down"
+                                >
+                                  <ChevronDownIcon className="h-4 w-4" />
+                                </Button>
                               </div>
+                              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold text-sm flex-shrink-0">
+                                {index + 1}
+                              </span>
+                              <div className="flex-1 space-y-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <Input
+                                    placeholder="Destination name"
+                                    value={dest.name}
+                                    onChange={(e) => updateDestinationName(dest.id, e.target.value)}
+                                    disabled={isSaving}
+                                  />
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      value={dest.daysToStay}
+                                      onChange={(e) => updateDestinationDays(dest.id, parseInt(e.target.value) || 1)}
+                                      className="w-20"
+                                      disabled={isSaving}
+                                    />
+                                    <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                      day{dest.daysToStay !== 1 ? 's' : ''}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <details className="group">
+                                  <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900 flex items-center gap-1">
+                                    Transportation Details (optional)
+                                    <ChevronDownIcon className="h-4 w-4 group-open:rotate-180 transition-transform" />
+                                  </summary>
+                                  <div className="mt-3 space-y-3 pl-1">
+                                    <div>
+                                      <Label className="text-xs">Type</Label>
+                                      <select
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        value={dest.transportationType || ''}
+                                        onChange={(e) => updateDestinationTransportationType(dest.id, e.target.value)}
+                                        disabled={isSaving}
+                                      >
+                                        <option value="">Select...</option>
+                                        <option value="flight">Flight</option>
+                                        <option value="train">Train</option>
+                                        <option value="bus">Bus</option>
+                                        <option value="car">Car</option>
+                                        <option value="ferry">Ferry</option>
+                                        <option value="other">Other</option>
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs">Details (e.g., flight number, train route)</Label>
+                                      <Input
+                                        placeholder="AA123, Eurostar to London, etc."
+                                        value={dest.transportationDetails || ''}
+                                        onChange={(e) => updateDestinationTransportationDetails(dest.id, e.target.value)}
+                                        disabled={isSaving}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label className="text-xs">Notes</Label>
+                                      <textarea
+                                        className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        placeholder="Departure time, booking reference, etc."
+                                        value={dest.transportationNotes || ''}
+                                        onChange={(e) => updateDestinationTransportationNotes(dest.id, e.target.value)}
+                                        disabled={isSaving}
+                                      />
+                                    </div>
+                                  </div>
+                                </details>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeDestination(dest.id)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                                disabled={isSaving}
+                              >
+                                <TrashIcon className="h-4 w-4" />
+                              </Button>
                             </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeDestination(dest.id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              disabled={isSaving}
-                            >
-                              <TrashIcon className="h-4 w-4" />
-                            </Button>
                           </div>
                         ))}
                       </div>
@@ -569,20 +643,52 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                         No destinations added yet
                       </div>
                     ) : (
-                      <div className="space-y-3">
-                        {trip.destinations.map((dest, index) => (
+                      <div className="space-y-4">
+                        {calculateDestinationDates(new Date(trip.startDate), trip.destinations).map((dest, index) => (
                           <div
                             key={dest.id}
-                            className="flex items-center gap-4 p-4 border rounded-lg bg-white hover:shadow-md transition-shadow"
+                            className="border rounded-lg bg-white hover:shadow-md transition-shadow overflow-hidden"
                           >
-                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-600 font-bold">
-                              {index + 1}
-                            </div>
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-lg">{dest.name}</h4>
-                              <p className="text-sm text-gray-600">
-                                {dest.daysToStay} day{dest.daysToStay !== 1 ? 's' : ''}
-                              </p>
+                            <div className="flex items-start gap-4 p-4">
+                              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-600 font-bold flex-shrink-0">
+                                {index + 1}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2 mb-2">
+                                  <h4 className="font-semibold text-lg">{dest.name}</h4>
+                                  <span className="text-sm font-medium text-blue-600 whitespace-nowrap">
+                                    {dest.daysToStay} day{dest.daysToStay !== 1 ? 's' : ''}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                                  <CalendarIcon className="h-4 w-4 flex-shrink-0" />
+                                  <span className="font-medium">{formatDateRange(dest.startDate, dest.endDate)}</span>
+                                </div>
+                                {(dest.transportationType || dest.transportationDetails || dest.transportationNotes) && (
+                                  <div className="mt-3 pt-3 border-t space-y-2">
+                                    {dest.transportationType && (
+                                      <div className="flex items-center gap-2 text-sm">
+                                        <span className="font-medium text-gray-700">Transportation:</span>
+                                        <span className="capitalize bg-gray-100 px-2 py-0.5 rounded text-gray-700">
+                                          {dest.transportationType}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {dest.transportationDetails && (
+                                      <div className="text-sm">
+                                        <span className="font-medium text-gray-700">Details: </span>
+                                        <span className="text-gray-600">{dest.transportationDetails}</span>
+                                      </div>
+                                    )}
+                                    {dest.transportationNotes && (
+                                      <div className="text-sm">
+                                        <span className="font-medium text-gray-700">Notes: </span>
+                                        <span className="text-gray-600">{dest.transportationNotes}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}

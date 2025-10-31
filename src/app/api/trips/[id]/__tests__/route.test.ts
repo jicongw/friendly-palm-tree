@@ -60,6 +60,9 @@ describe("/api/trips/[id]", () => {
             latitude: null,
             longitude: null,
             address: null,
+            transportationType: "flight",
+            transportationDetails: "AF456",
+            transportationNotes: "Check-in 2 hours early",
             createdAt: new Date(),
             updatedAt: new Date(),
           },
@@ -81,6 +84,9 @@ describe("/api/trips/[id]", () => {
       expect(data.title).toBe("Summer Vacation")
       expect(data.destinations).toHaveLength(1)
       expect(data.destinations[0].name).toBe("Paris")
+      expect(data.destinations[0].transportationType).toBe("flight")
+      expect(data.destinations[0].transportationDetails).toBe("AF456")
+      expect(data.destinations[0].transportationNotes).toBe("Check-in 2 hours early")
     })
 
     it("should return 401 if user is not authenticated", async () => {
@@ -464,6 +470,224 @@ describe("/api/trips/[id]", () => {
       expect(response.status).toBe(403)
       expect(data.error).toBe("Forbidden")
       expect(mockPrisma.trip.update).not.toHaveBeenCalled()
+    })
+
+    it("should update destinations with transportation details", async () => {
+      mockAuth.mockResolvedValue({
+        user: { id: "user-123", name: "Test User", email: "test@example.com" },
+        expires: new Date().toISOString(),
+      })
+
+      const existingTrip = {
+        id: "trip-123",
+        title: "Trip",
+        description: null,
+        startDate: new Date("2025-06-01"),
+        endDate: new Date("2025-06-15"),
+        userId: "user-123",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      const updatedTrip = {
+        ...existingTrip,
+        destinations: [
+          {
+            id: "dest-new-1",
+            name: "Paris",
+            daysToStay: 5,
+            order: 0,
+            tripId: "trip-123",
+            description: null,
+            latitude: null,
+            longitude: null,
+            address: null,
+            transportationType: "flight",
+            transportationDetails: "AF123",
+            transportationNotes: "Departs 10am from CDG",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+      }
+
+      mockPrisma.trip.findUnique.mockResolvedValue(existingTrip)
+      mockPrisma.destination.deleteMany.mockResolvedValue({ count: 0 })
+      mockPrisma.trip.update.mockResolvedValue(updatedTrip)
+
+      const request = new NextRequest("http://localhost:3000/api/trips/trip-123", {
+        method: "PATCH",
+        body: JSON.stringify({
+          destinations: [
+            {
+              name: "Paris",
+              daysToStay: 5,
+              order: 0,
+              transportationType: "flight",
+              transportationDetails: "AF123",
+              transportationNotes: "Departs 10am from CDG",
+            },
+          ],
+        }),
+      })
+
+      const params = Promise.resolve({ id: "trip-123" })
+      const response = await PATCH(request, { params })
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.destinations).toHaveLength(1)
+      expect(data.destinations[0].name).toBe("Paris")
+      expect(data.destinations[0].transportationType).toBe("flight")
+      expect(data.destinations[0].transportationDetails).toBe("AF123")
+      expect(data.destinations[0].transportationNotes).toBe("Departs 10am from CDG")
+    })
+
+    it("should handle null transportation details", async () => {
+      mockAuth.mockResolvedValue({
+        user: { id: "user-123", name: "Test User", email: "test@example.com" },
+        expires: new Date().toISOString(),
+      })
+
+      const existingTrip = {
+        id: "trip-123",
+        title: "Trip",
+        description: null,
+        startDate: new Date("2025-06-01"),
+        endDate: new Date("2025-06-15"),
+        userId: "user-123",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      const updatedTrip = {
+        ...existingTrip,
+        destinations: [
+          {
+            id: "dest-new-1",
+            name: "Paris",
+            daysToStay: 5,
+            order: 0,
+            tripId: "trip-123",
+            description: null,
+            latitude: null,
+            longitude: null,
+            address: null,
+            transportationType: null,
+            transportationDetails: null,
+            transportationNotes: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+      }
+
+      mockPrisma.trip.findUnique.mockResolvedValue(existingTrip)
+      mockPrisma.destination.deleteMany.mockResolvedValue({ count: 0 })
+      mockPrisma.trip.update.mockResolvedValue(updatedTrip)
+
+      const request = new NextRequest("http://localhost:3000/api/trips/trip-123", {
+        method: "PATCH",
+        body: JSON.stringify({
+          destinations: [
+            {
+              name: "Paris",
+              daysToStay: 5,
+              order: 0,
+            },
+          ],
+        }),
+      })
+
+      const params = Promise.resolve({ id: "trip-123" })
+      const response = await PATCH(request, { params })
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.destinations[0].transportationType).toBeNull()
+      expect(data.destinations[0].transportationDetails).toBeNull()
+      expect(data.destinations[0].transportationNotes).toBeNull()
+    })
+
+    it("should trim transportation field values", async () => {
+      mockAuth.mockResolvedValue({
+        user: { id: "user-123", name: "Test User", email: "test@example.com" },
+        expires: new Date().toISOString(),
+      })
+
+      const existingTrip = {
+        id: "trip-123",
+        title: "Trip",
+        description: null,
+        startDate: new Date("2025-06-01"),
+        endDate: new Date("2025-06-15"),
+        userId: "user-123",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      const updatedTrip = {
+        ...existingTrip,
+        destinations: [
+          {
+            id: "dest-new-1",
+            name: "Paris",
+            daysToStay: 5,
+            order: 0,
+            tripId: "trip-123",
+            description: null,
+            latitude: null,
+            longitude: null,
+            address: null,
+            transportationType: "flight",
+            transportationDetails: "AF123",
+            transportationNotes: "Departs 10am",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+      }
+
+      mockPrisma.trip.findUnique.mockResolvedValue(existingTrip)
+      mockPrisma.destination.deleteMany.mockResolvedValue({ count: 0 })
+      mockPrisma.trip.update.mockResolvedValue(updatedTrip)
+
+      const request = new NextRequest("http://localhost:3000/api/trips/trip-123", {
+        method: "PATCH",
+        body: JSON.stringify({
+          destinations: [
+            {
+              name: "Paris",
+              daysToStay: 5,
+              order: 0,
+              transportationType: "  flight  ",
+              transportationDetails: "  AF123  ",
+              transportationNotes: "  Departs 10am  ",
+            },
+          ],
+        }),
+      })
+
+      const params = Promise.resolve({ id: "trip-123" })
+      const response = await PATCH(request, { params })
+
+      expect(response.status).toBe(200)
+      // The API should call prisma.trip.update with trimmed values
+      expect(mockPrisma.trip.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            destinations: expect.objectContaining({
+              create: expect.arrayContaining([
+                expect.objectContaining({
+                  transportationType: "flight",
+                  transportationDetails: "AF123",
+                  transportationNotes: "Departs 10am",
+                }),
+              ]),
+            }),
+          }),
+        })
+      )
     })
   })
 

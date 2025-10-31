@@ -7,6 +7,9 @@ interface DestinationInput {
   name: string
   daysToStay?: number
   order?: number
+  transportationNotes?: string | null
+  transportationType?: string | null
+  transportationDetails?: string | null
 }
 
 interface UpdateTripRequest {
@@ -211,6 +214,9 @@ export async function PATCH(
               name: dest.name.trim(),
               daysToStay: dest.daysToStay || 1,
               order: dest.order ?? index,
+              transportationNotes: dest.transportationNotes?.trim() || null,
+              transportationType: dest.transportationType?.trim() || null,
+              transportationDetails: dest.transportationDetails?.trim() || null,
             }))
           }
         },
