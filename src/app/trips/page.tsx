@@ -91,67 +91,69 @@ export default async function TripsPage() {
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {trips.map((trip) => (
-                <Card key={trip.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="flex items-start justify-between">
-                      <span className="line-clamp-2">{trip.title}</span>
-                    </CardTitle>
-                    {trip.description && (
-                      <CardDescription className="line-clamp-2">
-                        {trip.description}
-                      </CardDescription>
-                    )}
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Dates */}
-                    <div className="flex items-center text-sm text-gray-600">
-                      <CalendarIcon className="h-4 w-4 mr-2 flex-shrink-0" />
-                      <span>
-                        {format(new Date(trip.startDate), "MMM d, yyyy")} -{" "}
-                        {format(new Date(trip.endDate), "MMM d, yyyy")}
-                      </span>
-                    </div>
-
-                    {/* Destinations */}
-                    {trip.destinations.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="flex items-center text-sm font-medium text-gray-700">
-                          <MapPinIcon className="h-4 w-4 mr-2" />
-                          Destinations ({trip.destinations.length})
-                        </div>
-                        <div className="space-y-1 pl-6">
-                          {trip.destinations.map((dest, index) => (
-                            <div
-                              key={dest.id}
-                              className="flex items-baseline text-sm text-gray-600"
-                            >
-                              <span className="text-blue-600 font-semibold mr-2 min-w-[20px]">
-                                {index + 1}.
-                              </span>
-                              <div className="flex-1">
-                                <span className="font-medium text-gray-900">
-                                  {dest.name}
-                                </span>
-                                <span className="text-gray-500 ml-2">
-                                  ({dest.daysToStay} day{dest.daysToStay !== 1 ? 's' : ''})
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Stats */}
-                    <div className="pt-3 border-t text-xs text-gray-500">
-                      {trip.destinations.length > 0 && (
-                        <span>
-                          Total: {trip.destinations.reduce((sum, d) => sum + d.daysToStay, 0)} days
-                        </span>
+                <Link key={trip.id} href={`/trips/${trip.id}`}>
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                    <CardHeader>
+                      <CardTitle className="flex items-start justify-between">
+                        <span className="line-clamp-2">{trip.title}</span>
+                      </CardTitle>
+                      {trip.description && (
+                        <CardDescription className="line-clamp-2">
+                          {trip.description}
+                        </CardDescription>
                       )}
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Dates */}
+                      <div className="flex items-center text-sm text-gray-600">
+                        <CalendarIcon className="h-4 w-4 mr-2 flex-shrink-0" />
+                        <span>
+                          {format(new Date(trip.startDate), "MMM d, yyyy")} -{" "}
+                          {format(new Date(trip.endDate), "MMM d, yyyy")}
+                        </span>
+                      </div>
+
+                      {/* Destinations */}
+                      {trip.destinations.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center text-sm font-medium text-gray-700">
+                            <MapPinIcon className="h-4 w-4 mr-2" />
+                            Destinations ({trip.destinations.length})
+                          </div>
+                          <div className="space-y-1 pl-6">
+                            {trip.destinations.map((dest, index) => (
+                              <div
+                                key={dest.id}
+                                className="flex items-baseline text-sm text-gray-600"
+                              >
+                                <span className="text-blue-600 font-semibold mr-2 min-w-[20px]">
+                                  {index + 1}.
+                                </span>
+                                <div className="flex-1">
+                                  <span className="font-medium text-gray-900">
+                                    {dest.name}
+                                  </span>
+                                  <span className="text-gray-500 ml-2">
+                                    ({dest.daysToStay} day{dest.daysToStay !== 1 ? 's' : ''})
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Stats */}
+                      <div className="pt-3 border-t text-xs text-gray-500">
+                        {trip.destinations.length > 0 && (
+                          <span>
+                            Total: {trip.destinations.reduce((sum, d) => sum + d.daysToStay, 0)} days
+                          </span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))}
             </div>
           )}
