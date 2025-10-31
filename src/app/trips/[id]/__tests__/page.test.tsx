@@ -27,12 +27,18 @@ const mockTrip = {
       name: "Paris",
       daysToStay: 5,
       order: 0,
+      transportationType: "flight",
+      transportationDetails: "AF456",
+      transportationNotes: "Check-in 2 hours early",
     },
     {
       id: "dest-2",
       name: "London",
       daysToStay: 3,
       order: 1,
+      transportationType: "train",
+      transportationDetails: "Eurostar 9012",
+      transportationNotes: null,
     },
   ],
 }
@@ -267,5 +273,114 @@ describe("TripDetailPage", () => {
     await waitFor(() => {
       expect(mockAlert).toHaveBeenCalledWith("Failed to load trip. Please try again.")
     }, { timeout: 3000 })
+  })
+
+  it("should display calculated dates for destinations", async () => {
+    const mockFetch = fetch as jest.MockedFunction<typeof fetch>
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockTrip,
+    } as Response)
+
+    render(<TripDetailPage params={Promise.resolve({ id: "trip-123" })} />)
+
+    await waitFor(() => {
+      expect(screen.getByText("Summer Vacation")).toBeInTheDocument()
+    }, { timeout: 3000 })
+
+    // Check that date information is displayed (format may vary)
+    // Looking for "Jun" to verify month is shown
+    const dateText = screen.getAllByText(/Jun/i)
+    expect(dateText.length).toBeGreaterThan(0)
+
+    // Verify both destinations are shown with their dates
+    expect(screen.getByText("Paris")).toBeInTheDocument()
+    expect(screen.getByText("London")).toBeInTheDocument()
+  })
+
+  it("should display transportation details in view mode", async () => {
+    const mockFetch = fetch as jest.MockedFunction<typeof fetch>
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockTrip,
+    } as Response)
+
+    render(<TripDetailPage params={Promise.resolve({ id: "trip-123" })} />)
+
+    await waitFor(() => {
+      expect(screen.getByText("Summer Vacation")).toBeInTheDocument()
+    }, { timeout: 3000 })
+
+    // Check Paris transportation
+    expect(screen.getByText(/flight/i)).toBeInTheDocument()
+    expect(screen.getByText("AF456")).toBeInTheDocument()
+    expect(screen.getByText("Check-in 2 hours early")).toBeInTheDocument()
+
+    // Check London transportation
+    expect(screen.getByText(/train/i)).toBeInTheDocument()
+    expect(screen.getByText("Eurostar 9012")).toBeInTheDocument()
+  })
+
+  it("should show transportation fields in edit mode", async () => {
+    const mockFetch = fetch as jest.MockedFunction<typeof fetch>
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockTrip,
+    } as Response)
+
+    const user = userEvent.setup()
+
+    render(<TripDetailPage params={Promise.resolve({ id: "trip-123" })} />)
+
+    await waitFor(() => {
+      expect(screen.getByText("Summer Vacation")).toBeInTheDocument()
+    }, { timeout: 3000 })
+
+    // Click Edit button
+    const editButton = screen.getByRole("button", { name: /Edit/i })
+    await act(async () => {
+      await user.click(editButton)
+    })
+
+    // Check that transportation fields are present in edit mode
+    await waitFor(() => {
+      // Transportation Details section should be expandable
+      expect(screen.getAllByText(/Transportation Details/i).length).toBeGreaterThan(0)
+    })
+  })
+
+  it("should handle destinations without transportation details", async () => {
+    const tripWithoutTransportation = {
+      ...mockTrip,
+      destinations: [
+        {
+          id: "dest-1",
+          name: "Paris",
+          daysToStay: 5,
+          order: 0,
+          transportationType: null,
+          transportationDetails: null,
+          transportationNotes: null,
+        },
+      ],
+    }
+
+    const mockFetch = fetch as jest.MockedFunction<typeof fetch>
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => tripWithoutTransportation,
+    } as Response)
+
+    render(<TripDetailPage params={Promise.resolve({ id: "trip-123" })} />)
+
+    await waitFor(() => {
+      expect(screen.getByText("Summer Vacation")).toBeInTheDocument()
+    }, { timeout: 3000 })
+
+    // Paris should still be displayed
+    expect(screen.getByText("Paris")).toBeInTheDocument()
+    // But no transportation type badge should be shown
+    const transportationBadges = screen.queryAllByText(/flight|train|bus|car|ferry/i)
+    expect(transportationBadges.length).toBe(0)
   })
 })
