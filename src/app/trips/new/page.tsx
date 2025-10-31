@@ -145,6 +145,7 @@ export default function NewTripPage() {
                     placeholder="e.g., Summer Europe Tour"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
+                    disabled={isLoading}
                     required
                   />
                 </div>
@@ -158,6 +159,7 @@ export default function NewTripPage() {
                     placeholder="Tell us about your trip..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
+                    disabled={isLoading}
                   />
                 </div>
 
@@ -170,6 +172,7 @@ export default function NewTripPage() {
                         <Button
                           variant="outline"
                           className="w-full justify-start text-left font-normal"
+                          disabled={isLoading}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {startDate ? format(startDate, "PPP") : "Pick a date"}
@@ -193,6 +196,7 @@ export default function NewTripPage() {
                         <Button
                           variant="outline"
                           className="w-full justify-start text-left font-normal"
+                          disabled={isLoading}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {endDate ? format(endDate, "PPP") : "Pick a date"}
@@ -236,6 +240,7 @@ export default function NewTripPage() {
                               placeholder="City name"
                               value={dest.name}
                               onChange={(e) => updateDestinationName(dest.id, e.target.value)}
+                              disabled={isLoading}
                             />
                             <div className="flex items-center gap-2">
                               <Input
@@ -244,6 +249,7 @@ export default function NewTripPage() {
                                 value={dest.daysToStay}
                                 onChange={(e) => updateDestinationDays(dest.id, parseInt(e.target.value) || 1)}
                                 className="w-20"
+                                disabled={isLoading}
                               />
                               <span className="text-sm text-muted-foreground whitespace-nowrap">
                                 day{dest.daysToStay !== 1 ? 's' : ''}
@@ -256,6 +262,7 @@ export default function NewTripPage() {
                             size="sm"
                             onClick={() => removeDestination(dest.id)}
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            disabled={isLoading}
                           >
                             <TrashIcon className="h-4 w-4" />
                           </Button>
@@ -274,6 +281,7 @@ export default function NewTripPage() {
                         onChange={(e) => setNewDestName(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addDestination())}
                         className="flex-1"
+                        disabled={isLoading}
                       />
                       <div className="flex items-center gap-2">
                         <Input
@@ -282,6 +290,7 @@ export default function NewTripPage() {
                           value={newDestDays}
                           onChange={(e) => setNewDestDays(parseInt(e.target.value) || 1)}
                           className="w-20"
+                          disabled={isLoading}
                         />
                         <span className="text-sm text-muted-foreground whitespace-nowrap">
                           day{newDestDays !== 1 ? 's' : ''}
@@ -290,7 +299,7 @@ export default function NewTripPage() {
                           type="button"
                           onClick={addDestination}
                           size="sm"
-                          disabled={!newDestName.trim()}
+                          disabled={!newDestName.trim() || isLoading}
                         >
                           <PlusIcon className="h-4 w-4 mr-1" />
                           Add
