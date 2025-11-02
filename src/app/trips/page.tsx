@@ -121,31 +121,38 @@ export default async function TripsPage() {
                             Destinations ({trip.destinations.length})
                           </div>
                           <div className="space-y-1 pl-6">
-                            {trip.destinations.map((dest, index) => (
-                              <div
-                                key={dest.id}
-                                className="flex items-baseline text-sm text-gray-600"
-                              >
-                                <span className="text-blue-600 font-semibold mr-2 min-w-[20px]">
-                                  {index + 1}.
-                                </span>
-                                <div className="flex-1">
-                                  <span className="font-medium text-gray-900">
-                                    {dest.city}
+                            {trip.destinations.map((dest, index) => {
+                              // Calculate days for last destination if null
+                              let displayDays = dest.daysToStay
+                              if (dest.daysToStay === null) {
+                                const totalDays = Math.ceil(
+                                  (new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) / (1000 * 60 * 60 * 24)
+                                )
+                                const previousDays = trip.destinations
+                                  .slice(0, index)
+                                  .reduce((sum, d) => sum + (d.daysToStay || 0), 0)
+                                displayDays = totalDays - previousDays
+                              }
+
+                              return (
+                                <div
+                                  key={dest.id}
+                                  className="flex items-baseline text-sm text-gray-600"
+                                >
+                                  <span className="text-blue-600 font-semibold mr-2 min-w-[20px]">
+                                    {index + 1}.
                                   </span>
-                                  {dest.daysToStay !== null && (
-                                    <span className="text-gray-500 ml-2">
-                                      ({dest.daysToStay} day{dest.daysToStay !== 1 ? 's' : ''})
+                                  <div className="flex-1">
+                                    <span className="font-medium text-gray-900">
+                                      {dest.city}
                                     </span>
-                                  )}
-                                  {dest.daysToStay === null && (
                                     <span className="text-gray-500 ml-2">
-                                      (Return)
+                                      ({displayDays} day{displayDays !== 1 ? 's' : ''})
                                     </span>
-                                  )}
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              )
+                            })}
                           </div>
                         </div>
                       )}
@@ -154,7 +161,9 @@ export default async function TripsPage() {
                       <div className="pt-3 border-t text-xs text-gray-500">
                         {trip.destinations.length > 0 && (
                           <span>
-                            Total: {trip.destinations.reduce((sum, d) => sum + (d.daysToStay || 0), 0)} days
+                            Total: {Math.ceil(
+                              (new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) / (1000 * 60 * 60 * 24)
+                            )} days
                           </span>
                         )}
                       </div>
