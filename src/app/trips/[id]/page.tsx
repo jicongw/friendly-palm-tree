@@ -104,6 +104,9 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   const [isCreatingActivity, setIsCreatingActivity] = useState(false)
 
   // Edit dialog state
+  const [editingItem, setEditingItem] = useState<ItineraryItem | null>(null)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
   // Unwrap params
   useEffect(() => {
     params.then(({ id }) => setTripId(id))
@@ -216,6 +219,70 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     }
   }
 
+  const handleEditItem = (item: ItineraryItem) => {
+    setEditingItem(item)
+    setShowEditDialog(true)
+  }
+
+  const handleUpdateItem = async () => {
+    if (!editingItem) return
+
+    setIsUpdating(true)
+
+    try {
+      const updateData: any = {
+        description: editingItem.description,
+        confirmationEmailLink: editingItem.confirmationEmailLink,
+        cost: editingItem.cost,
+      }
+
+      // Add type-specific fields
+      if (editingItem.type === ItineraryType.TRANSPORTATION) {
+        updateData.transportationType = editingItem.transportationType
+        updateData.departTime = editingItem.departTime
+        updateData.arriveTime = editingItem.arriveTime
+        updateData.departCity = editingItem.departCity
+        updateData.arriveCity = editingItem.arriveCity
+      } else if (editingItem.type === ItineraryType.LODGING) {
+        updateData.lodgingName = editingItem.lodgingName
+        updateData.checkinTime = editingItem.checkinTime
+        updateData.checkoutTime = editingItem.checkoutTime
+        updateData.lodgingAddress = editingItem.lodgingAddress
+      } else if (editingItem.type === ItineraryType.ACTIVITY) {
+        updateData.activityName = editingItem.activityName
+        updateData.startTime = editingItem.startTime
+        updateData.duration = editingItem.duration
+        updateData.activityAddress = editingItem.activityAddress
+        updateData.activityDescription = editingItem.activityDescription
+      }
+
+      const response = await fetch(`/api/itinerary-items/${editingItem.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updateData),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to update item")
+      }
+
+      // Refresh trip data
+      await fetchTrip()
+      setShowEditDialog(false)
+      setEditingItem(null)
+      toast.success("Item updated successfully!")
+    } catch (error) {
+      console.error("Error updating item:", error)
+      const message = error instanceof Error ? error.message : "Failed to update item"
+      toast.error(message)
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
   const renderTransportationItem = (item: ItineraryItem) => (
     <Card key={item.id} className="border-l-4 border-l-blue-500">
       <CardHeader className="pb-3">
@@ -224,15 +291,26 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
             <PlaneIcon className="h-5 w-5 text-blue-600" />
             <CardTitle className="text-lg">Transportation</CardTitle>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleDeleteItem(item.id)}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-            aria-label="Delete transportation item"
-          >
-            <TrashIcon className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleEditItem(item)}
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              aria-label="Edit transportation item"
+            >
+              <EditIcon className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleDeleteItem(item.id)}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              aria-label="Delete transportation item"
+            >
+              <TrashIcon className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <CardDescription>
           {item.transportationType && `${item.transportationType.charAt(0).toUpperCase() + item.transportationType.slice(1)} • `}
@@ -273,15 +351,26 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
             <BedIcon className="h-5 w-5 text-purple-600" />
             <CardTitle className="text-lg">Lodging</CardTitle>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleDeleteItem(item.id)}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-            aria-label="Delete lodging item"
-          >
-            <TrashIcon className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleEditItem(item)}
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              aria-label="Edit lodging item"
+            >
+              <EditIcon className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleDeleteItem(item.id)}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              aria-label="Delete lodging item"
+            >
+              <TrashIcon className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <CardDescription>{item.lodgingName}</CardDescription>
       </CardHeader>
@@ -325,15 +414,26 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
             <MapPinIcon className="h-5 w-5 text-green-600" />
             <CardTitle className="text-lg">Activity</CardTitle>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleDeleteItem(item.id)}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-            aria-label="Delete activity item"
-          >
-            <TrashIcon className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleEditItem(item)}
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              aria-label="Edit activity item"
+            >
+              <EditIcon className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleDeleteItem(item.id)}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              aria-label="Delete activity item"
+            >
+              <TrashIcon className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <CardDescription>{item.activityName}</CardDescription>
       </CardHeader>
@@ -587,6 +687,234 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Item Dialog */}
+      {editingItem && (
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit {editingItem.type === ItineraryType.TRANSPORTATION ? 'Transportation' : editingItem.type === ItineraryType.LODGING ? 'Lodging' : 'Activity'}</DialogTitle>
+              <DialogDescription>
+                Update the details for this itinerary item
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {/* Transportation Fields */}
+              {editingItem.type === ItineraryType.TRANSPORTATION && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-transportationType">Transportation Type</Label>
+                    <Select
+                      value={editingItem.transportationType || "flight"}
+                      onValueChange={(value) => setEditingItem({...editingItem, transportationType: value})}
+                    >
+                      <SelectTrigger id="edit-transportationType">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="flight">Flight</SelectItem>
+                        <SelectItem value="train">Train</SelectItem>
+                        <SelectItem value="bus">Bus</SelectItem>
+                        <SelectItem value="car">Car</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-departCity">Depart City</Label>
+                      <Input
+                        id="edit-departCity"
+                        value={editingItem.departCity || ""}
+                        onChange={(e) => setEditingItem({...editingItem, departCity: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-arriveCity">Arrive City</Label>
+                      <Input
+                        id="edit-arriveCity"
+                        value={editingItem.arriveCity || ""}
+                        onChange={(e) => setEditingItem({...editingItem, arriveCity: e.target.value})}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-departTime">Depart Time</Label>
+                      <Input
+                        id="edit-departTime"
+                        type="datetime-local"
+                        value={editingItem.departTime ? new Date(editingItem.departTime).toISOString().slice(0, 16) : ""}
+                        onChange={(e) => setEditingItem({...editingItem, departTime: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-arriveTime">Arrive Time</Label>
+                      <Input
+                        id="edit-arriveTime"
+                        type="datetime-local"
+                        value={editingItem.arriveTime ? new Date(editingItem.arriveTime).toISOString().slice(0, 16) : ""}
+                        onChange={(e) => setEditingItem({...editingItem, arriveTime: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Lodging Fields */}
+              {editingItem.type === ItineraryType.LODGING && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-lodgingName">Lodging Name</Label>
+                    <Input
+                      id="edit-lodgingName"
+                      value={editingItem.lodgingName || ""}
+                      onChange={(e) => setEditingItem({...editingItem, lodgingName: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-lodgingAddress">Address</Label>
+                    <Input
+                      id="edit-lodgingAddress"
+                      value={editingItem.lodgingAddress || ""}
+                      onChange={(e) => setEditingItem({...editingItem, lodgingAddress: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-checkinTime">Check-in Time</Label>
+                      <Input
+                        id="edit-checkinTime"
+                        type="datetime-local"
+                        value={editingItem.checkinTime ? new Date(editingItem.checkinTime).toISOString().slice(0, 16) : ""}
+                        onChange={(e) => setEditingItem({...editingItem, checkinTime: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-checkoutTime">Check-out Time</Label>
+                      <Input
+                        id="edit-checkoutTime"
+                        type="datetime-local"
+                        value={editingItem.checkoutTime ? new Date(editingItem.checkoutTime).toISOString().slice(0, 16) : ""}
+                        onChange={(e) => setEditingItem({...editingItem, checkoutTime: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Activity Fields */}
+              {editingItem.type === ItineraryType.ACTIVITY && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-activityName">Activity Name</Label>
+                    <Input
+                      id="edit-activityName"
+                      value={editingItem.activityName || ""}
+                      onChange={(e) => setEditingItem({...editingItem, activityName: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-activityAddress">Address</Label>
+                    <Input
+                      id="edit-activityAddress"
+                      value={editingItem.activityAddress || ""}
+                      onChange={(e) => setEditingItem({...editingItem, activityAddress: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-startTime">Start Time</Label>
+                      <Input
+                        id="edit-startTime"
+                        type="datetime-local"
+                        value={editingItem.startTime ? new Date(editingItem.startTime).toISOString().slice(0, 16) : ""}
+                        onChange={(e) => setEditingItem({...editingItem, startTime: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-duration">Duration (minutes)</Label>
+                      <Input
+                        id="edit-duration"
+                        type="number"
+                        min="1"
+                        value={editingItem.duration || ""}
+                        onChange={(e) => setEditingItem({...editingItem, duration: parseInt(e.target.value) || 0})}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-activityDescription">Description</Label>
+                    <textarea
+                      id="edit-activityDescription"
+                      className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={editingItem.activityDescription || ""}
+                      onChange={(e) => setEditingItem({...editingItem, activityDescription: e.target.value})}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Common Fields */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-cost">Cost ($)</Label>
+                <Input
+                  id="edit-cost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editingItem.cost || ""}
+                  onChange={(e) => setEditingItem({...editingItem, cost: parseFloat(e.target.value) || 0})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Notes</Label>
+                <textarea
+                  id="edit-description"
+                  className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={editingItem.description || ""}
+                  onChange={(e) => setEditingItem({...editingItem, description: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-confirmationEmailLink">Confirmation Email Link</Label>
+                <Input
+                  id="edit-confirmationEmailLink"
+                  type="url"
+                  placeholder="https://..."
+                  value={editingItem.confirmationEmailLink || ""}
+                  onChange={(e) => setEditingItem({...editingItem, confirmationEmailLink: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowEditDialog(false)
+                  setEditingItem(null)
+                }}
+                disabled={isUpdating}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateItem} disabled={isUpdating}>
+                {isUpdating ? "Updating..." : "Update Item"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
