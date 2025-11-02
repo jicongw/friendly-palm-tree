@@ -1,10 +1,10 @@
 import { PrismaClient, ItineraryType } from '@prisma/client'
-import { addDays, setHours, setMinutes } from 'date-fns'
+import { addDays, setHours, setMinutes, set } from 'date-fns'
 
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('Starting database seed...')
+  console.log('🌱 Starting database seed...\n')
 
   // Find or create test user
   let user = await prisma.user.findUnique({
@@ -14,14 +14,14 @@ async function main() {
   })
 
   if (user) {
-    console.log('Found existing user:', user.email)
+    console.log('👤 Found existing user:', user.email)
     // Delete existing trips for this user to avoid duplicates
     const deletedCount = await prisma.trip.deleteMany({
       where: {
         userId: user.id,
       },
     })
-    console.log('Deleted', deletedCount.count, 'existing trips')
+    console.log('🗑️  Deleted', deletedCount.count, 'existing trips')
   } else {
     user = await prisma.user.create({
       data: {
@@ -30,10 +30,12 @@ async function main() {
         emailVerified: new Date(),
       },
     })
-    console.log('Created test user:', user.email)
+    console.log('✨ Created test user:', user.email)
   }
+  console.log()
 
   // Trip 1: Summer Europe Tour (3 destinations)
+  console.log('📝 Creating trip 1/3: Summer Europe Adventure...')
   const trip1StartDate = new Date(2025, 5, 1) // June 1, 2025
   const trip1EndDate = new Date(2025, 5, 15) // June 15, 2025
 
@@ -204,9 +206,10 @@ async function main() {
       },
     },
   })
-  console.log('Created trip 1:', trip1.title)
+  console.log('✅ Created trip 1:', trip1.title)
 
   // Trip 2: Quick Japan Getaway (2 destinations)
+  console.log('📝 Creating trip 2/3: Japan Discovery...')
   const trip2StartDate = new Date(2025, 8, 10) // September 10, 2025
   const trip2EndDate = new Date(2025, 8, 20) // September 20, 2025
 
@@ -329,9 +332,10 @@ async function main() {
       },
     },
   })
-  console.log('Created trip 2:', trip2.title)
+  console.log('✅ Created trip 2:', trip2.title)
 
   // Trip 3: Weekend NYC Trip (single destination)
+  console.log('📝 Creating trip 3/3: NYC Weekend Getaway...')
   const trip3StartDate = new Date(2025, 3, 18) // April 18, 2025
   const trip3EndDate = new Date(2025, 3, 21) // April 21, 2025
 
@@ -419,12 +423,14 @@ async function main() {
       },
     },
   })
-  console.log('Created trip 3:', trip3.title)
+  console.log('✅ Created trip 3:', trip3.title)
 
-  console.log('\n✅ Database seeded successfully!')
-  console.log(`   - User: ${user.email}`)
-  console.log(`   - Created 3 trips with destinations and itinerary items`)
-  console.log(`   - Total itinerary items: ${await prisma.itineraryItem.count()}`)
+  const itineraryCount = await prisma.itineraryItem.count()
+
+  console.log('\n🎉 Database seeded successfully!')
+  console.log(`   👤 User: ${user.email}`)
+  console.log(`   ✈️  Created 3 trips with destinations and itinerary items`)
+  console.log(`   📋 Total itinerary items: ${itineraryCount}`)
 }
 
 main()
