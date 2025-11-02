@@ -45,6 +45,11 @@ export async function GET(
           orderBy: {
             order: 'asc'
           }
+        },
+        itineraryItems: {
+          orderBy: {
+            order: 'asc'
+          }
         }
       }
     })

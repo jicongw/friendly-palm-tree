@@ -12,7 +12,8 @@ describe('date-utils', () => {
 
       expect(result).toHaveLength(1)
       expect(result[0].startDate).toEqual(new Date(2025, 5, 1))
-      expect(result[0].endDate).toEqual(new Date(2025, 5, 3))
+      // 3 nights: arrive June 1, depart June 4
+      expect(result[0].endDate).toEqual(new Date(2025, 5, 4))
     })
 
     it('should calculate dates for multiple destinations in order', () => {
@@ -27,17 +28,17 @@ describe('date-utils', () => {
 
       expect(result).toHaveLength(3)
 
-      // Paris: June 1-3
+      // Paris: June 1-4 (3 nights, arrive June 1, depart June 4)
       expect(result[0].startDate).toEqual(new Date(2025, 5, 1))
-      expect(result[0].endDate).toEqual(new Date(2025, 5, 3))
+      expect(result[0].endDate).toEqual(new Date(2025, 5, 4))
 
-      // Rome: June 4-7
+      // Rome: June 4-8 (4 nights, arrive June 4, depart June 8)
       expect(result[1].startDate).toEqual(new Date(2025, 5, 4))
-      expect(result[1].endDate).toEqual(new Date(2025, 5, 7))
+      expect(result[1].endDate).toEqual(new Date(2025, 5, 8))
 
-      // Barcelona: June 8-9
+      // Barcelona: June 8-10 (2 nights, arrive June 8, depart June 10)
       expect(result[2].startDate).toEqual(new Date(2025, 5, 8))
-      expect(result[2].endDate).toEqual(new Date(2025, 5, 9))
+      expect(result[2].endDate).toEqual(new Date(2025, 5, 10))
     })
 
     it('should handle single day stays correctly', () => {
@@ -49,13 +50,13 @@ describe('date-utils', () => {
 
       const result = calculateDestinationDates(tripStartDate, destinations)
 
-      // Paris: June 1 only
+      // Paris: June 1-2 (1 night, arrive June 1, depart June 2)
       expect(result[0].startDate).toEqual(new Date(2025, 5, 1))
-      expect(result[0].endDate).toEqual(new Date(2025, 5, 1))
+      expect(result[0].endDate).toEqual(new Date(2025, 5, 2))
 
-      // Rome: June 2 only
+      // Rome: June 2-3 (1 night, arrive June 2, depart June 3)
       expect(result[1].startDate).toEqual(new Date(2025, 5, 2))
-      expect(result[1].endDate).toEqual(new Date(2025, 5, 2))
+      expect(result[1].endDate).toEqual(new Date(2025, 5, 3))
     })
 
     it('should sort destinations by order before calculating', () => {
@@ -73,10 +74,10 @@ describe('date-utils', () => {
       expect(result[1].name).toBe('Rome')
       expect(result[2].name).toBe('Barcelona')
 
-      // Dates should be calculated in correct order
-      expect(result[0].startDate).toEqual(new Date(2025, 5, 1))
-      expect(result[1].startDate).toEqual(new Date(2025, 5, 4))
-      expect(result[2].startDate).toEqual(new Date(2025, 5, 6))
+      // Dates should be calculated in correct order with overlap
+      expect(result[0].startDate).toEqual(new Date(2025, 5, 1)) // June 1
+      expect(result[1].startDate).toEqual(new Date(2025, 5, 4)) // June 4 (overlaps with Paris end)
+      expect(result[2].startDate).toEqual(new Date(2025, 5, 6)) // June 6 (overlaps with Rome end)
     })
 
     it('should preserve transportation details in result', () => {

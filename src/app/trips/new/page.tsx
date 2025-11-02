@@ -8,14 +8,14 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, PlusIcon, TrashIcon, MapIcon, ArrowLeftIcon } from "lucide-react"
+import { CalendarIcon, PlusIcon, TrashIcon, MapIcon, ArrowLeftIcon, HomeIcon } from "lucide-react"
 import { format } from "date-fns"
 import Link from "next/link"
 
 interface Destination {
   id: string
-  name: string
-  daysToStay: number
+  city: string
+  daysToStay: number | null
 }
 
 export default function NewTripPage() {
@@ -23,23 +23,24 @@ export default function NewTripPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
+  const [homeCity, setHomeCity] = useState("")
   const [startDate, setStartDate] = useState<Date>()
   const [endDate, setEndDate] = useState<Date>()
   const [destinations, setDestinations] = useState<Destination[]>([])
-  const [newDestName, setNewDestName] = useState("")
+  const [newDestCity, setNewDestCity] = useState("")
   const [newDestDays, setNewDestDays] = useState(1)
 
   const addDestination = () => {
-    if (!newDestName.trim()) return
+    if (!newDestCity.trim()) return
 
     const newDest: Destination = {
       id: Math.random().toString(36).substr(2, 9),
-      name: newDestName.trim(),
+      city: newDestCity.trim(),
       daysToStay: newDestDays
     }
 
     setDestinations([...destinations, newDest])
-    setNewDestName("")
+    setNewDestCity("")
     setNewDestDays(1)
   }
 
@@ -47,9 +48,9 @@ export default function NewTripPage() {
     setDestinations(destinations.filter(d => d.id !== id))
   }
 
-  const updateDestinationName = (id: string, name: string) => {
+  const updateDestinationCity = (id: string, city: string) => {
     setDestinations(destinations.map(d =>
-      d.id === id ? { ...d, name } : d
+      d.id === id ? { ...d, city } : d
     ))
   }
 
@@ -62,8 +63,13 @@ export default function NewTripPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!title.trim() || !startDate || !endDate) {
+    if (!title.trim() || !homeCity.trim() || !startDate || !endDate) {
       alert("Please fill in all required fields")
+      return
+    }
+
+    if (destinations.length === 0) {
+      alert("Please add at least one destination")
       return
     }
 
@@ -75,6 +81,12 @@ export default function NewTripPage() {
     setIsLoading(true)
 
     try {
+      // Prepare destinations: all but last have daysToStay, last has null
+      const preparedDestinations = destinations.map((d, index) => ({
+        city: d.city,
+        daysToStay: index === destinations.length - 1 ? null : d.daysToStay
+      }))
+
       const response = await fetch("/api/trips", {
         method: "POST",
         headers: {
@@ -83,24 +95,22 @@ export default function NewTripPage() {
         body: JSON.stringify({
           title,
           description,
+          homeCity,
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
-          destinations: destinations.map((d, index) => ({
-            name: d.name,
-            daysToStay: d.daysToStay,
-            order: index
-          }))
+          destinations: preparedDestinations
         })
       })
 
       if (!response.ok) {
-        throw new Error("Failed to create trip")
+        const error = await response.json()
+        throw new Error(error.error || "Failed to create trip")
       }
 
       router.push("/trips")
     } catch (error) {
       console.error("Error creating trip:", error)
-      alert("Failed to create trip. Please try again.")
+      alert(`Failed to create trip: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsLoading(false)
     }
@@ -132,7 +142,7 @@ export default function NewTripPage() {
             <CardHeader>
               <CardTitle>Create New Trip</CardTitle>
               <CardDescription>
-                Plan your next adventure by adding destinations and dates
+                Plan your next adventure by adding your home city, destinations, and dates
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -161,6 +171,25 @@ export default function NewTripPage() {
                     onChange={(e) => setDescription(e.target.value)}
                     disabled={isLoading}
                   />
+                </div>
+
+                {/* Home City */}
+                <div className="space-y-2">
+                  <Label htmlFor="homeCity" className="flex items-center gap-2">
+                    <HomeIcon className="h-4 w-4" />
+                    Home City *
+                  </Label>
+                  <Input
+                    id="homeCity"
+                    placeholder="e.g., New York"
+                    value={homeCity}
+                    onChange={(e) => setHomeCity(e.target.value)}
+                    disabled={isLoading}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Your starting point for the trip
+                  </p>
                 </div>
 
                 {/* Date Selection */}
@@ -218,56 +247,68 @@ export default function NewTripPage() {
                 {/* Destinations Section */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label className="text-base">Destinations</Label>
+                    <Label className="text-base">Destinations *</Label>
                     <span className="text-sm text-muted-foreground">
                       {destinations.length} destination{destinations.length !== 1 ? 's' : ''}
                     </span>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    The last destination will be your return destination (no lodging needed)
+                  </p>
 
                   {/* Existing Destinations */}
                   {destinations.length > 0 && (
                     <div className="space-y-3">
-                      {destinations.map((dest, index) => (
-                        <div
-                          key={dest.id}
-                          className="flex items-center gap-3 p-3 border rounded-lg bg-white"
-                        >
-                          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">
-                            {index + 1}
-                          </span>
-                          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <Input
-                              placeholder="City name"
-                              value={dest.name}
-                              onChange={(e) => updateDestinationName(dest.id, e.target.value)}
-                              disabled={isLoading}
-                            />
-                            <div className="flex items-center gap-2">
+                      {destinations.map((dest, index) => {
+                        const isLastDestination = index === destinations.length - 1
+                        return (
+                          <div
+                            key={dest.id}
+                            className="flex items-center gap-3 p-3 border rounded-lg bg-white"
+                          >
+                            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">
+                              {index + 1}
+                            </span>
+                            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
                               <Input
-                                type="number"
-                                min="1"
-                                value={dest.daysToStay}
-                                onChange={(e) => updateDestinationDays(dest.id, parseInt(e.target.value) || 1)}
-                                className="w-20"
+                                placeholder="City name"
+                                value={dest.city}
+                                onChange={(e) => updateDestinationCity(dest.id, e.target.value)}
                                 disabled={isLoading}
                               />
-                              <span className="text-sm text-muted-foreground whitespace-nowrap">
-                                day{dest.daysToStay !== 1 ? 's' : ''}
-                              </span>
+                              {!isLastDestination ? (
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    value={dest.daysToStay || 1}
+                                    onChange={(e) => updateDestinationDays(dest.id, parseInt(e.target.value) || 1)}
+                                    className="w-20"
+                                    disabled={isLoading}
+                                  />
+                                  <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                    night{(dest.daysToStay || 1) !== 1 ? 's' : ''}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  Return destination
+                                </div>
+                              )}
                             </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeDestination(dest.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              disabled={isLoading}
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </Button>
                           </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeDestination(dest.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            disabled={isLoading}
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
 
@@ -277,8 +318,8 @@ export default function NewTripPage() {
                     <div className="flex flex-col md:flex-row gap-3">
                       <Input
                         placeholder="City name"
-                        value={newDestName}
-                        onChange={(e) => setNewDestName(e.target.value)}
+                        value={newDestCity}
+                        onChange={(e) => setNewDestCity(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addDestination())}
                         className="flex-1"
                         disabled={isLoading}
@@ -293,13 +334,13 @@ export default function NewTripPage() {
                           disabled={isLoading}
                         />
                         <span className="text-sm text-muted-foreground whitespace-nowrap">
-                          day{newDestDays !== 1 ? 's' : ''}
+                          night{newDestDays !== 1 ? 's' : ''}
                         </span>
                         <Button
                           type="button"
                           onClick={addDestination}
                           size="sm"
-                          disabled={!newDestName.trim() || isLoading}
+                          disabled={!newDestCity.trim() || isLoading}
                         >
                           <PlusIcon className="h-4 w-4 mr-1" />
                           Add
