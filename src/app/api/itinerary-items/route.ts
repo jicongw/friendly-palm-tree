@@ -2,37 +2,38 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { ItineraryType } from "@prisma/client"
+import { z } from "zod"
 
-interface CreateItineraryItemRequest {
-  tripId: string
-  type: ItineraryType
-  order?: number
+const CreateItineraryItemSchema = z.object({
+  tripId: z.string().min(1, "Trip ID is required"),
+  type: z.nativeEnum(ItineraryType),
+  order: z.number().int().min(0).optional(),
 
   // Common fields
-  description?: string
-  confirmationEmailLink?: string
-  cost?: number
+  description: z.string().max(5000).optional(),
+  confirmationEmailLink: z.string().url().max(500).optional().or(z.literal("")),
+  cost: z.number().min(0).max(1000000).optional(),
 
   // Transportation fields
-  transportationType?: string
-  departTime?: string
-  arriveTime?: string
-  departCity?: string
-  arriveCity?: string
+  transportationType: z.string().max(50).optional(),
+  departTime: z.string().datetime().optional().or(z.literal("")),
+  arriveTime: z.string().datetime().optional().or(z.literal("")),
+  departCity: z.string().max(100).optional(),
+  arriveCity: z.string().max(100).optional(),
 
   // Lodging fields
-  lodgingName?: string
-  checkinTime?: string
-  checkoutTime?: string
-  lodgingAddress?: string
+  lodgingName: z.string().max(200).optional(),
+  checkinTime: z.string().datetime().optional().or(z.literal("")),
+  checkoutTime: z.string().datetime().optional().or(z.literal("")),
+  lodgingAddress: z.string().max(500).optional(),
 
   // Activity fields
-  activityName?: string
-  startTime?: string
-  duration?: number
-  activityAddress?: string
-  activityDescription?: string
-}
+  activityName: z.string().max(200).optional(),
+  startTime: z.string().datetime().optional().or(z.literal("")),
+  duration: z.number().int().min(1).max(1440).optional(), // Max 24 hours
+  activityAddress: z.string().max(500).optional(),
+  activityDescription: z.string().max(5000).optional(),
+})
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,7 +46,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const body = await request.json() as CreateItineraryItemRequest
+    const rawBody = await request.json()
+
+    // Validate request body
+    const validationResult = CreateItineraryItemSchema.safeParse(rawBody)
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: "Invalid request data", details: validationResult.error.errors },
+        { status: 400 }
+      )
+    }
+
+    const body = validationResult.data
 
     // Verify trip exists and user owns it
     const trip = await prisma.trip.findUnique({
@@ -80,16 +92,16 @@ export async function POST(request: NextRequest) {
         confirmationEmailLink: body.confirmationEmailLink,
         cost: body.cost,
         transportationType: body.transportationType,
-        departTime: body.departTime ? new Date(body.departTime) : null,
-        arriveTime: body.arriveTime ? new Date(body.arriveTime) : null,
+        departTime: body.departTime && body.departTime !== "" ? new Date(body.departTime) : null,
+        arriveTime: body.arriveTime && body.arriveTime !== "" ? new Date(body.arriveTime) : null,
         departCity: body.departCity,
         arriveCity: body.arriveCity,
         lodgingName: body.lodgingName,
-        checkinTime: body.checkinTime ? new Date(body.checkinTime) : null,
-        checkoutTime: body.checkoutTime ? new Date(body.checkoutTime) : null,
+        checkinTime: body.checkinTime && body.checkinTime !== "" ? new Date(body.checkinTime) : null,
+        checkoutTime: body.checkoutTime && body.checkoutTime !== "" ? new Date(body.checkoutTime) : null,
         lodgingAddress: body.lodgingAddress,
         activityName: body.activityName,
-        startTime: body.startTime ? new Date(body.startTime) : null,
+        startTime: body.startTime && body.startTime !== "" ? new Date(body.startTime) : null,
         duration: body.duration,
         activityAddress: body.activityAddress,
         activityDescription: body.activityDescription,

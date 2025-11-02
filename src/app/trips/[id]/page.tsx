@@ -40,6 +40,7 @@ import {
 import { format } from "date-fns"
 import Link from "next/link"
 import { ItineraryType } from "@prisma/client"
+import { toast } from "sonner"
 
 interface ItineraryItem {
   id: string
@@ -103,9 +104,6 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   const [isCreatingActivity, setIsCreatingActivity] = useState(false)
 
   // Edit dialog state
-  const [editingItem, setEditingItem] = useState<ItineraryItem | null>(null)
-  const [showEditDialog, setShowEditDialog] = useState(false)
-
   // Unwrap params
   useEffect(() => {
     params.then(({ id }) => setTripId(id))
@@ -130,7 +128,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       setTrip(data)
     } catch (error) {
       console.error("Error fetching trip:", error)
-      alert("Failed to load trip. Please try again.")
+      toast.error("Failed to load trip. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -142,7 +140,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
   const handleCreateActivity = async () => {
     if (!activityName.trim() || !activityStartTime) {
-      alert("Please fill in activity name and start time")
+      toast.error("Please fill in activity name and start time")
       return
     }
 
@@ -167,7 +165,8 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       })
 
       if (!response.ok) {
-        throw new Error("Failed to create activity")
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to create activity")
       }
 
       // Refresh trip data
@@ -181,9 +180,12 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       setActivityAddress("")
       setActivityDescription("")
       setActivityCost("")
+
+      toast.success("Activity added successfully!")
     } catch (error) {
       console.error("Error creating activity:", error)
-      alert("Failed to create activity. Please try again.")
+      const message = error instanceof Error ? error.message : "Failed to create activity"
+      toast.error(message)
     } finally {
       setIsCreatingActivity(false)
     }
@@ -200,14 +202,17 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       })
 
       if (!response.ok) {
-        throw new Error("Failed to delete item")
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to delete item")
       }
 
       // Refresh trip data
       await fetchTrip()
+      toast.success("Item deleted successfully")
     } catch (error) {
       console.error("Error deleting item:", error)
-      alert("Failed to delete item. Please try again.")
+      const message = error instanceof Error ? error.message : "Failed to delete item"
+      toast.error(message)
     }
   }
 
@@ -224,6 +229,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
             size="sm"
             onClick={() => handleDeleteItem(item.id)}
             className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            aria-label="Delete transportation item"
           >
             <TrashIcon className="h-4 w-4" />
           </Button>
@@ -272,6 +278,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
             size="sm"
             onClick={() => handleDeleteItem(item.id)}
             className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            aria-label="Delete lodging item"
           >
             <TrashIcon className="h-4 w-4" />
           </Button>
@@ -323,6 +330,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
             size="sm"
             onClick={() => handleDeleteItem(item.id)}
             className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            aria-label="Delete activity item"
           >
             <TrashIcon className="h-4 w-4" />
           </Button>
@@ -372,7 +380,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   const calculateTotalCost = () => {
-    if (!trip) return 0
+    if (!trip || !trip.itineraryItems) return 0
     return trip.itineraryItems.reduce((sum, item) => sum + (item.cost || 0), 0)
   }
 

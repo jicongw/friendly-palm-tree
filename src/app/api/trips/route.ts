@@ -2,20 +2,21 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
 import { generateItineraryItems } from "@/lib/itinerary-generator"
+import { z } from "zod"
 
-interface DestinationInput {
-  city: string
-  daysToStay: number | null // null for last destination (return destination)
-}
-
-interface CreateTripRequest {
-  title: string
-  description?: string
-  startDate: string
-  endDate: string
-  homeCity: string
-  destinations: DestinationInput[]
-}
+const CreateTripSchema = z.object({
+  title: z.string().min(1, "Title is required").max(200, "Title is too long"),
+  description: z.string().max(5000, "Description is too long").optional(),
+  startDate: z.string().datetime("Invalid start date"),
+  endDate: z.string().datetime("Invalid end date"),
+  homeCity: z.string().min(1, "Home city is required").max(100, "Home city name is too long"),
+  destinations: z.array(
+    z.object({
+      city: z.string().min(1, "City name is required").max(100, "City name is too long"),
+      daysToStay: z.number().int().min(1).max(365).nullable(),
+    })
+  ).min(1, "At least one destination is required"),
+})
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,40 +29,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const body = await request.json() as CreateTripRequest
-    const { title, description, startDate, endDate, homeCity, destinations } = body
+    const rawBody = await request.json()
 
-    // Validate required fields
-    if (!title || !startDate || !endDate || !homeCity || !destinations) {
+    // Validate request body
+    const validationResult = CreateTripSchema.safeParse(rawBody)
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: "Missing required fields: title, startDate, endDate, homeCity, and destinations are required" },
+        { error: "Invalid request data", details: validationResult.error.errors },
         { status: 400 }
       )
     }
 
-    // Validate title is not empty
-    if (!title.trim()) {
-      return NextResponse.json(
-        { error: "Title cannot be empty" },
-        { status: 400 }
-      )
-    }
-
-    // Validate homeCity is not empty
-    if (!homeCity.trim()) {
-      return NextResponse.json(
-        { error: "Home city cannot be empty" },
-        { status: 400 }
-      )
-    }
-
-    // Validate destinations array is not empty
-    if (destinations.length === 0) {
-      return NextResponse.json(
-        { error: "At least one destination is required" },
-        { status: 400 }
-      )
-    }
+    const { title, description, startDate, endDate, homeCity, destinations } = validationResult.data
 
     // Validate dates
     const start = new Date(startDate)

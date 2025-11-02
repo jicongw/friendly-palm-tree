@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, PlusIcon, TrashIcon, MapIcon, ArrowLeftIcon, HomeIcon } from "lucide-react"
 import { format } from "date-fns"
 import Link from "next/link"
+import { toast } from "sonner"
 
 interface Destination {
   id: string
@@ -64,17 +65,17 @@ export default function NewTripPage() {
     e.preventDefault()
 
     if (!title.trim() || !homeCity.trim() || !startDate || !endDate) {
-      alert("Please fill in all required fields")
+      toast.error("Please fill in all required fields")
       return
     }
 
     if (destinations.length === 0) {
-      alert("Please add at least one destination")
+      toast.error("Please add at least one destination")
       return
     }
 
     if (startDate > endDate) {
-      alert("End date must be after start date")
+      toast.error("End date must be after start date")
       return
     }
 
@@ -103,14 +104,16 @@ export default function NewTripPage() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to create trip")
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to create trip")
       }
 
+      toast.success("Trip created successfully!")
       router.push("/trips")
     } catch (error) {
       console.error("Error creating trip:", error)
-      alert(`Failed to create trip: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      toast.error(`Failed to create trip: ${message}`)
     } finally {
       setIsLoading(false)
     }

@@ -94,6 +94,7 @@ model TripDestination {
 
   trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
+  @@index([tripId, order])
   @@map("trip_destinations")
 }
 
@@ -133,6 +134,7 @@ model ItineraryItem {
 
   trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
+  @@index([tripId, order])
   @@map("itinerary_items")
 }
 
