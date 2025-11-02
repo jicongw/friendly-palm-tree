@@ -34,12 +34,13 @@ export function calculateDestinationDates(
 
   return sortedDestinations.map((destination) => {
     const startDate = new Date(currentDate)
-    // End date is start date + (daysToStay - 1) days
-    // Example: If staying 3 days starting June 1, you're there June 1, 2, 3 (end date is June 3)
-    const endDate = addDays(startDate, destination.daysToStay - 1)
+    // End date includes the departure/transition day
+    // Example: If staying 3 nights starting June 1, you arrive June 1, stay nights 1-3, depart June 4
+    // This allows planning arrival transportation, lodging (nights), and departure transportation
+    const endDate = addDays(startDate, destination.daysToStay)
 
-    // Move current date to the day after this destination ends
-    currentDate = addDays(endDate, 1)
+    // Next destination starts on the same day this one ends (overlap day for transportation)
+    currentDate = endDate
 
     return {
       ...destination,
