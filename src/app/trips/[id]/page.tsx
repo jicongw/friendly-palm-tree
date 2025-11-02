@@ -103,6 +103,29 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   const [activityCost, setActivityCost] = useState<string>("")
   const [isCreatingActivity, setIsCreatingActivity] = useState(false)
 
+  // Transportation dialog state
+  const [showTransportationDialog, setShowTransportationDialog] = useState(false)
+  const [transportationType, setTransportationType] = useState("flight")
+  const [departCity, setDepartCity] = useState("")
+  const [arriveCity, setArriveCity] = useState("")
+  const [departTime, setDepartTime] = useState<Date>()
+  const [arriveTime, setArriveTime] = useState<Date>()
+  const [transportationCost, setTransportationCost] = useState<string>("")
+  const [transportationDescription, setTransportationDescription] = useState("")
+  const [transportationConfirmation, setTransportationConfirmation] = useState("")
+  const [isCreatingTransportation, setIsCreatingTransportation] = useState(false)
+
+  // Lodging dialog state
+  const [showLodgingDialog, setShowLodgingDialog] = useState(false)
+  const [lodgingName, setLodgingName] = useState("")
+  const [lodgingAddress, setLodgingAddress] = useState("")
+  const [checkinTime, setCheckinTime] = useState<Date>()
+  const [checkoutTime, setCheckoutTime] = useState<Date>()
+  const [lodgingCost, setLodgingCost] = useState<string>("")
+  const [lodgingDescription, setLodgingDescription] = useState("")
+  const [lodgingConfirmation, setLodgingConfirmation] = useState("")
+  const [isCreatingLodging, setIsCreatingLodging] = useState(false)
+
   // Edit dialog state
   const [editingItem, setEditingItem] = useState<ItineraryItem | null>(null)
   const [showEditDialog, setShowEditDialog] = useState(false)
@@ -191,6 +214,118 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
       toast.error(message)
     } finally {
       setIsCreatingActivity(false)
+    }
+  }
+
+  const handleCreateTransportation = async () => {
+    if (!departCity.trim() || !arriveCity.trim() || !departTime) {
+      toast.error("Please fill in depart city, arrive city, and depart time")
+      return
+    }
+
+    setIsCreatingTransportation(true)
+
+    try {
+      const response = await fetch("/api/itinerary-items", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tripId,
+          type: ItineraryType.TRANSPORTATION,
+          transportationType: transportationType,
+          departCity: departCity.trim(),
+          arriveCity: arriveCity.trim(),
+          departTime: departTime.toISOString(),
+          arriveTime: arriveTime?.toISOString(),
+          cost: transportationCost ? parseFloat(transportationCost) : undefined,
+          description: transportationDescription.trim() || undefined,
+          confirmationEmailLink: transportationConfirmation.trim() || undefined,
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to create transportation")
+      }
+
+      // Refresh trip data
+      await fetchTrip()
+
+      // Reset form
+      setShowTransportationDialog(false)
+      setTransportationType("flight")
+      setDepartCity("")
+      setArriveCity("")
+      setDepartTime(undefined)
+      setArriveTime(undefined)
+      setTransportationCost("")
+      setTransportationDescription("")
+      setTransportationConfirmation("")
+
+      toast.success("Transportation added successfully!")
+    } catch (error) {
+      console.error("Error creating transportation:", error)
+      const message = error instanceof Error ? error.message : "Failed to create transportation"
+      toast.error(message)
+    } finally {
+      setIsCreatingTransportation(false)
+    }
+  }
+
+  const handleCreateLodging = async () => {
+    if (!lodgingName.trim() || !checkinTime) {
+      toast.error("Please fill in lodging name and check-in time")
+      return
+    }
+
+    setIsCreatingLodging(true)
+
+    try {
+      const response = await fetch("/api/itinerary-items", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tripId,
+          type: ItineraryType.LODGING,
+          lodgingName: lodgingName.trim(),
+          lodgingAddress: lodgingAddress.trim() || undefined,
+          checkinTime: checkinTime.toISOString(),
+          checkoutTime: checkoutTime?.toISOString(),
+          cost: lodgingCost ? parseFloat(lodgingCost) : undefined,
+          description: lodgingDescription.trim() || undefined,
+          confirmationEmailLink: lodgingConfirmation.trim() || undefined,
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to create lodging")
+      }
+
+      // Refresh trip data
+      await fetchTrip()
+
+      // Reset form
+      setShowLodgingDialog(false)
+      setLodgingName("")
+      setLodgingAddress("")
+      setCheckinTime(undefined)
+      setCheckoutTime(undefined)
+      setLodgingCost("")
+      setLodgingDescription("")
+      setLodgingConfirmation("")
+
+      toast.success("Lodging added successfully!")
+    } catch (error) {
+      console.error("Error creating lodging:", error)
+      const message = error instanceof Error ? error.message : "Failed to create lodging"
+      toast.error(message)
+    } finally {
+      setIsCreatingLodging(false)
     }
   }
 
@@ -557,8 +692,16 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
             </CardContent>
           </Card>
 
-          {/* Add Activity Button */}
-          <div className="flex justify-end">
+          {/* Add Item Buttons */}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowTransportationDialog(true)}>
+              <PlusIcon className="h-4 w-4 mr-2" />
+              Add Transportation
+            </Button>
+            <Button variant="outline" onClick={() => setShowLodgingDialog(true)}>
+              <PlusIcon className="h-4 w-4 mr-2" />
+              Add Lodging
+            </Button>
             <Button onClick={() => setShowActivityDialog(true)}>
               <PlusIcon className="h-4 w-4 mr-2" />
               Add Activity
@@ -683,6 +826,283 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
             </Button>
             <Button onClick={handleCreateActivity} disabled={isCreatingActivity}>
               {isCreatingActivity ? "Creating..." : "Create Activity"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Transportation Dialog */}
+      <Dialog open={showTransportationDialog} onOpenChange={setShowTransportationDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Transportation</DialogTitle>
+            <DialogDescription>
+              Add a new transportation item to your trip itinerary
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="transportationType">Transportation Type *</Label>
+              <Select value={transportationType} onValueChange={setTransportationType}>
+                <SelectTrigger id="transportationType">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="flight">Flight</SelectItem>
+                  <SelectItem value="train">Train</SelectItem>
+                  <SelectItem value="bus">Bus</SelectItem>
+                  <SelectItem value="car">Car</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="departCity">Depart City *</Label>
+                <Input
+                  id="departCity"
+                  placeholder="e.g., Paris"
+                  value={departCity}
+                  onChange={(e) => setDepartCity(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="arriveCity">Arrive City *</Label>
+                <Input
+                  id="arriveCity"
+                  placeholder="e.g., Rome"
+                  value={arriveCity}
+                  onChange={(e) => setArriveCity(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Depart Time *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {departTime ? format(departTime, "PPPp") : "Pick a date and time"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={departTime}
+                      onSelect={setDepartTime}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Arrive Time</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {arriveTime ? format(arriveTime, "PPPp") : "Pick a date and time"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={arriveTime}
+                      onSelect={setArriveTime}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="transportationCost">Cost ($)</Label>
+              <Input
+                id="transportationCost"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={transportationCost}
+                onChange={(e) => setTransportationCost(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="transportationDescription">Description</Label>
+              <textarea
+                id="transportationDescription"
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder="e.g., Flight AF123, Terminal 2E"
+                value={transportationDescription}
+                onChange={(e) => setTransportationDescription(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="transportationConfirmation">Confirmation Email Link</Label>
+              <Input
+                id="transportationConfirmation"
+                type="url"
+                placeholder="https://..."
+                value={transportationConfirmation}
+                onChange={(e) => setTransportationConfirmation(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowTransportationDialog(false)}
+              disabled={isCreatingTransportation}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleCreateTransportation} disabled={isCreatingTransportation}>
+              {isCreatingTransportation ? "Creating..." : "Create Transportation"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Lodging Dialog */}
+      <Dialog open={showLodgingDialog} onOpenChange={setShowLodgingDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Lodging</DialogTitle>
+            <DialogDescription>
+              Add a new lodging item to your trip itinerary
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="lodgingName">Lodging Name *</Label>
+              <Input
+                id="lodgingName"
+                placeholder="e.g., Hotel Paris"
+                value={lodgingName}
+                onChange={(e) => setLodgingName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lodgingAddress">Address</Label>
+              <Input
+                id="lodgingAddress"
+                placeholder="e.g., 123 Rue de Paris, 75001 Paris"
+                value={lodgingAddress}
+                onChange={(e) => setLodgingAddress(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Check-in Time *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {checkinTime ? format(checkinTime, "PPPp") : "Pick a date and time"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={checkinTime}
+                      onSelect={setCheckinTime}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Check-out Time</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {checkoutTime ? format(checkoutTime, "PPPp") : "Pick a date and time"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={checkoutTime}
+                      onSelect={setCheckoutTime}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lodgingCost">Cost ($)</Label>
+              <Input
+                id="lodgingCost"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={lodgingCost}
+                onChange={(e) => setLodgingCost(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lodgingDescription">Description</Label>
+              <textarea
+                id="lodgingDescription"
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder="Additional notes..."
+                value={lodgingDescription}
+                onChange={(e) => setLodgingDescription(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lodgingConfirmation">Confirmation Email Link</Label>
+              <Input
+                id="lodgingConfirmation"
+                type="url"
+                placeholder="https://..."
+                value={lodgingConfirmation}
+                onChange={(e) => setLodgingConfirmation(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowLodgingDialog(false)}
+              disabled={isCreatingLodging}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleCreateLodging} disabled={isCreatingLodging}>
+              {isCreatingLodging ? "Creating..." : "Create Lodging"}
             </Button>
           </DialogFooter>
         </DialogContent>
