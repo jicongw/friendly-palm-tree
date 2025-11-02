@@ -1,32 +1,33 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+import { z } from "zod"
 
-interface UpdateItineraryItemRequest {
-  description?: string
-  confirmationEmailLink?: string
-  cost?: number
+const UpdateItineraryItemSchema = z.object({
+  description: z.string().max(5000).optional(),
+  confirmationEmailLink: z.string().url().max(2000).optional().nullable().or(z.literal("")),
+  cost: z.number().min(0).optional().nullable(),
 
   // Transportation fields
-  transportationType?: string
-  departTime?: string
-  arriveTime?: string
-  departCity?: string
-  arriveCity?: string
+  transportationType: z.enum(["flight", "train", "bus", "car", "ferry", "other"]).optional().nullable(),
+  departTime: z.string().datetime().optional().nullable(),
+  arriveTime: z.string().datetime().optional().nullable(),
+  departCity: z.string().max(100).optional().nullable(),
+  arriveCity: z.string().max(100).optional().nullable(),
 
   // Lodging fields
-  lodgingName?: string
-  checkinTime?: string
-  checkoutTime?: string
-  lodgingAddress?: string
+  lodgingName: z.string().max(200).optional().nullable(),
+  checkinTime: z.string().datetime().optional().nullable(),
+  checkoutTime: z.string().datetime().optional().nullable(),
+  lodgingAddress: z.string().max(500).optional().nullable(),
 
   // Activity fields
-  activityName?: string
-  startTime?: string
-  duration?: number
-  activityAddress?: string
-  activityDescription?: string
-}
+  activityName: z.string().max(200).optional().nullable(),
+  startTime: z.string().datetime().optional().nullable(),
+  duration: z.number().min(0).max(1440).optional().nullable(), // Max 1440 minutes (24 hours)
+  activityAddress: z.string().max(500).optional().nullable(),
+  activityDescription: z.string().max(5000).optional().nullable(),
+}).strict() // Reject unknown fields
 
 export async function PATCH(
   request: NextRequest,
@@ -64,7 +65,37 @@ export async function PATCH(
       )
     }
 
-    const body = await request.json() as UpdateItineraryItemRequest
+    const rawBody = await request.json()
+
+    // Validate request body
+    const validationResult = UpdateItineraryItemSchema.safeParse(rawBody)
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: "Invalid request data", details: validationResult.error.errors },
+        { status: 400 }
+      )
+    }
+
+    const body = validationResult.data
+
+    // Validate dates if provided
+    const dates = [
+      body.departTime,
+      body.arriveTime,
+      body.checkinTime,
+      body.checkoutTime,
+      body.startTime
+    ].filter(Boolean)
+
+    for (const dateStr of dates) {
+      const date = new Date(dateStr as string)
+      if (isNaN(date.getTime())) {
+        return NextResponse.json(
+          { error: "Invalid date format" },
+          { status: 400 }
+        )
+      }
+    }
 
     // Update itinerary item
     const item = await prisma.itineraryItem.update({

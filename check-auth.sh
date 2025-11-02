@@ -13,6 +13,13 @@ else
   exit 1
 fi
 
+# Verify PostgreSQL version is 16.x
+PSQL_VERSION=$($PSQL_CMD --version | grep -oE '[0-9]+' | head -1)
+if [ "$PSQL_VERSION" != "16" ]; then
+  echo "Warning: PostgreSQL version mismatch. Expected 16, found $PSQL_VERSION"
+  echo "Some features may not work as expected."
+fi
+
 echo "=== User Authentication Status ==="
 $PSQL_CMD -d trip_planner -c "
 SELECT

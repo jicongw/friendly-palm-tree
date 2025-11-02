@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { MapIcon, CalendarIcon, PlusIcon, ArrowLeftIcon, MapPinIcon } from "lucide-react"
 import Link from "next/link"
-import { format } from "date-fns"
+import { format, differenceInDays } from "date-fns"
 
 export default async function TripsPage() {
   const session = await auth()
@@ -90,87 +90,88 @@ export default async function TripsPage() {
             </Card>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {trips.map((trip) => (
-                <Link key={trip.id} href={`/trips/${trip.id}`}>
-                  <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-                    <CardHeader>
-                      <CardTitle className="flex items-start justify-between">
-                        <span className="line-clamp-2">{trip.title}</span>
-                      </CardTitle>
-                      {trip.description && (
-                        <CardDescription className="line-clamp-2">
-                          {trip.description}
-                        </CardDescription>
-                      )}
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Dates */}
-                      <div className="flex items-center text-sm text-gray-600">
-                        <CalendarIcon className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span>
-                          {format(new Date(trip.startDate), "MMM d, yyyy")} -{" "}
-                          {format(new Date(trip.endDate), "MMM d, yyyy")}
-                        </span>
-                      </div>
+              {trips.map((trip) => {
+                // Calculate total days once per trip using date-fns
+                const totalDays = differenceInDays(new Date(trip.endDate), new Date(trip.startDate))
 
-                      {/* Destinations */}
-                      {trip.destinations.length > 0 && (
-                        <div className="space-y-2">
-                          <div className="flex items-center text-sm font-medium text-gray-700">
-                            <MapPinIcon className="h-4 w-4 mr-2" />
-                            Destinations ({trip.destinations.length})
-                          </div>
-                          <div className="space-y-1 pl-6">
-                            {trip.destinations.map((dest, index) => {
-                              // Calculate days for last destination if null
-                              let displayDays = dest.daysToStay
-                              if (dest.daysToStay === null) {
-                                const totalDays = Math.ceil(
-                                  (new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) / (1000 * 60 * 60 * 24)
-                                )
-                                const previousDays = trip.destinations
-                                  .slice(0, index)
-                                  .reduce((sum, d) => sum + (d.daysToStay || 0), 0)
-                                displayDays = totalDays - previousDays
-                              }
-
-                              return (
-                                <div
-                                  key={dest.id}
-                                  className="flex items-baseline text-sm text-gray-600"
-                                >
-                                  <span className="text-blue-600 font-semibold mr-2 min-w-[20px]">
-                                    {index + 1}.
-                                  </span>
-                                  <div className="flex-1">
-                                    <span className="font-medium text-gray-900">
-                                      {dest.city}
-                                    </span>
-                                    <span className="text-gray-500 ml-2">
-                                      ({displayDays} day{displayDays !== 1 ? 's' : ''})
-                                    </span>
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Stats */}
-                      <div className="pt-3 border-t text-xs text-gray-500">
-                        {trip.destinations.length > 0 && (
-                          <span>
-                            Total: {Math.ceil(
-                              (new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) / (1000 * 60 * 60 * 24)
-                            )} days
-                          </span>
+                return (
+                  <Link key={trip.id} href={`/trips/${trip.id}`}>
+                    <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                      <CardHeader>
+                        <CardTitle className="flex items-start justify-between">
+                          <span className="line-clamp-2">{trip.title}</span>
+                        </CardTitle>
+                        {trip.description && (
+                          <CardDescription className="line-clamp-2">
+                            {trip.description}
+                          </CardDescription>
                         )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {/* Dates */}
+                        <div className="flex items-center text-sm text-gray-600">
+                          <CalendarIcon className="h-4 w-4 mr-2 flex-shrink-0" />
+                          <span>
+                            {format(new Date(trip.startDate), "MMM d, yyyy")} -{" "}
+                            {format(new Date(trip.endDate), "MMM d, yyyy")}
+                          </span>
+                        </div>
+
+                        {/* Destinations */}
+                        {trip.destinations.length > 0 && (
+                          <div className="space-y-2">
+                            <div className="flex items-center text-sm font-medium text-gray-700">
+                              <MapPinIcon className="h-4 w-4 mr-2" />
+                              Destinations ({trip.destinations.length})
+                            </div>
+                            <div className="space-y-1 pl-6">
+                              {trip.destinations.map((dest, index) => {
+                                // Calculate days for last destination if null
+                                let displayDays = dest.daysToStay
+                                if (dest.daysToStay === null) {
+                                  const previousDays = trip.destinations
+                                    .slice(0, index)
+                                    .reduce((sum, d) => sum + (d.daysToStay || 0), 0)
+                                  // Ensure we don't show negative days
+                                  displayDays = Math.max(0, totalDays - previousDays)
+                                }
+
+                                return (
+                                  <div
+                                    key={dest.id}
+                                    className="flex items-baseline text-sm text-gray-600"
+                                  >
+                                    <span className="text-blue-600 font-semibold mr-2 min-w-[20px]">
+                                      {index + 1}.
+                                    </span>
+                                    <div className="flex-1">
+                                      <span className="font-medium text-gray-900">
+                                        {dest.city}
+                                      </span>
+                                      <span className="text-gray-500 ml-2">
+                                        ({displayDays} day{displayDays !== 1 ? 's' : ''})
+                                      </span>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Stats */}
+                        <div className="pt-3 border-t text-xs text-gray-500">
+                          {trip.destinations.length > 0 && (
+                            <span>
+                              Total: {totalDays} day{totalDays !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                )
+              })}
             </div>
           )}
         </div>
