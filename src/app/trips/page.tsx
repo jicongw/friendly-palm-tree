@@ -131,11 +131,18 @@ export default async function TripsPage() {
                                 </span>
                                 <div className="flex-1">
                                   <span className="font-medium text-gray-900">
-                                    {dest.name}
+                                    {dest.city}
                                   </span>
-                                  <span className="text-gray-500 ml-2">
-                                    ({dest.daysToStay} day{dest.daysToStay !== 1 ? 's' : ''})
-                                  </span>
+                                  {dest.daysToStay !== null && (
+                                    <span className="text-gray-500 ml-2">
+                                      ({dest.daysToStay} day{dest.daysToStay !== 1 ? 's' : ''})
+                                    </span>
+                                  )}
+                                  {dest.daysToStay === null && (
+                                    <span className="text-gray-500 ml-2">
+                                      (Return)
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             ))}
@@ -147,7 +154,7 @@ export default async function TripsPage() {
                       <div className="pt-3 border-t text-xs text-gray-500">
                         {trip.destinations.length > 0 && (
                           <span>
-                            Total: {trip.destinations.reduce((sum, d) => sum + d.daysToStay, 0)} days
+                            Total: {trip.destinations.reduce((sum, d) => sum + (d.daysToStay || 0), 0)} days
                           </span>
                         )}
                       </div>
