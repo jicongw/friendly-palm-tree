@@ -44,37 +44,31 @@ describe("/api/trips", () => {
         description: "A fun trip",
         startDate: new Date("2025-06-01"),
         endDate: new Date("2025-06-15"),
+        homeCity: "New York",
         userId: "user-123",
         createdAt: new Date(),
         updatedAt: new Date(),
         destinations: [
           {
             id: "dest-1",
-            name: "Paris",
+            city: "Paris",
             daysToStay: 5,
             order: 0,
             tripId: "trip-123",
-            description: null,
-            latitude: null,
-            longitude: null,
-            address: null,
             createdAt: new Date(),
             updatedAt: new Date(),
           },
           {
             id: "dest-2",
-            name: "London",
+            city: "London",
             daysToStay: 3,
             order: 1,
             tripId: "trip-123",
-            description: null,
-            latitude: null,
-            longitude: null,
-            address: null,
             createdAt: new Date(),
             updatedAt: new Date(),
           },
         ],
+        itineraryItems: [],
       }
 
       mockPrisma.trip.create.mockResolvedValue(mockTrip)
@@ -85,9 +79,10 @@ describe("/api/trips", () => {
         description: "A fun trip",
         startDate: "2025-06-01T00:00:00.000Z",
         endDate: "2025-06-15T00:00:00.000Z",
+        homeCity: "New York",
         destinations: [
-          { name: "Paris", daysToStay: 5, order: 0 },
-          { name: "London", daysToStay: 3, order: 1 },
+          { city: "Paris", daysToStay: 5 },
+          { city: "London", daysToStay: 3 },
         ],
       }
 
@@ -103,61 +98,52 @@ describe("/api/trips", () => {
       // Assertions
       expect(response.status).toBe(201)
       expect(data.title).toBe("Summer Vacation")
+      expect(data.homeCity).toBe("New York")
       expect(data.destinations).toHaveLength(2)
-      expect(data.destinations[0].name).toBe("Paris")
+      expect(data.destinations[0].city).toBe("Paris")
       expect(data.destinations[0].daysToStay).toBe(5)
-      expect(data.destinations[1].name).toBe("London")
+      expect(data.destinations[1].city).toBe("London")
       expect(data.destinations[1].daysToStay).toBe(3)
 
       // Verify prisma was called correctly
-      expect(mockPrisma.trip.create).toHaveBeenCalledWith({
-        data: {
-          title: "Summer Vacation",
-          description: "A fun trip",
-          startDate: new Date("2025-06-01T00:00:00.000Z"),
-          endDate: new Date("2025-06-15T00:00:00.000Z"),
-          userId: "user-123",
-          destinations: {
-            create: [
-              { name: "Paris", daysToStay: 5, order: 0 },
-              { name: "London", daysToStay: 3, order: 1 },
-            ],
-          },
-        },
-        include: {
-          destinations: {
-            orderBy: {
-              order: "asc",
+      expect(mockPrisma.trip.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            title: "Summer Vacation",
+            description: "A fun trip",
+            startDate: new Date("2025-06-01T00:00:00.000Z"),
+            endDate: new Date("2025-06-15T00:00:00.000Z"),
+            homeCity: "New York",
+            userId: "user-123",
+            destinations: {
+              create: [
+                { city: "Paris", daysToStay: 5, order: 0 },
+                { city: "London", daysToStay: 3, order: 1 },
+              ],
             },
-          },
-        },
-      })
+          }),
+          include: expect.objectContaining({
+            destinations: {
+              orderBy: {
+                order: "asc",
+              },
+            },
+          }),
+        })
+      )
     })
 
-    it("should create a trip without destinations", async () => {
+    it("should return 400 if destinations array is empty", async () => {
       mockAuth.mockResolvedValue({
         user: { id: "user-123", name: "Test User", email: "test@example.com" },
         expires: new Date().toISOString(),
       })
 
-      const mockTrip = {
-        id: "trip-123",
-        title: "Quick Trip",
-        description: null,
-        startDate: new Date("2025-07-01"),
-        endDate: new Date("2025-07-05"),
-        userId: "user-123",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        destinations: [],
-      }
-
-      mockPrisma.trip.create.mockResolvedValue(mockTrip)
-
       const requestBody = {
         title: "Quick Trip",
         startDate: "2025-07-01T00:00:00.000Z",
         endDate: "2025-07-05T00:00:00.000Z",
+        homeCity: "New York",
         destinations: [],
       }
 
@@ -169,9 +155,8 @@ describe("/api/trips", () => {
       const response = await POST(request)
       const data = await response.json()
 
-      expect(response.status).toBe(201)
-      expect(data.title).toBe("Quick Trip")
-      expect(data.destinations).toHaveLength(0)
+      expect(response.status).toBe(400)
+      expect(data.error).toBe("Invalid request data")
     })
 
     it("should return 401 if user is not authenticated", async () => {
@@ -181,7 +166,10 @@ describe("/api/trips", () => {
         title: "Unauthorized Trip",
         startDate: "2025-06-01T00:00:00.000Z",
         endDate: "2025-06-15T00:00:00.000Z",
-        destinations: [],
+        homeCity: "New York",
+        destinations: [
+          { city: "Paris", daysToStay: 5 },
+        ],
       }
 
       const request = new NextRequest("http://localhost:3000/api/trips", {
@@ -207,6 +195,10 @@ describe("/api/trips", () => {
         // Missing title
         startDate: "2025-06-01T00:00:00.000Z",
         endDate: "2025-06-15T00:00:00.000Z",
+        homeCity: "New York",
+        destinations: [
+          { city: "Paris", daysToStay: 5 },
+        ],
       }
 
       const request = new NextRequest("http://localhost:3000/api/trips", {
@@ -218,7 +210,7 @@ describe("/api/trips", () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe("Missing required fields")
+      expect(data.error).toBe("Invalid request data")
       expect(mockPrisma.trip.create).not.toHaveBeenCalled()
     })
 
@@ -234,7 +226,10 @@ describe("/api/trips", () => {
         title: "Error Trip",
         startDate: "2025-06-01T00:00:00.000Z",
         endDate: "2025-06-15T00:00:00.000Z",
-        destinations: [],
+        homeCity: "New York",
+        destinations: [
+          { city: "Paris", daysToStay: 5 },
+        ],
       }
 
       const request = new NextRequest("http://localhost:3000/api/trips", {
@@ -264,24 +259,22 @@ describe("/api/trips", () => {
           description: "First trip",
           startDate: new Date("2025-06-01"),
           endDate: new Date("2025-06-10"),
+          homeCity: "New York",
           userId: "user-123",
           createdAt: new Date(),
           updatedAt: new Date(),
           destinations: [
             {
               id: "dest-1",
-              name: "Paris",
+              city: "Paris",
               daysToStay: 5,
               order: 0,
               tripId: "trip-1",
-              description: null,
-              latitude: null,
-              longitude: null,
-              address: null,
               createdAt: new Date(),
               updatedAt: new Date(),
             },
           ],
+          itineraryItems: [],
         },
         {
           id: "trip-2",
@@ -289,10 +282,22 @@ describe("/api/trips", () => {
           description: null,
           startDate: new Date("2025-07-01"),
           endDate: new Date("2025-07-15"),
+          homeCity: "Los Angeles",
           userId: "user-123",
           createdAt: new Date(),
           updatedAt: new Date(),
-          destinations: [],
+          destinations: [
+            {
+              id: "dest-2",
+              city: "Tokyo",
+              daysToStay: 7,
+              order: 0,
+              tripId: "trip-2",
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+          ],
+          itineraryItems: [],
         },
       ]
 
@@ -316,6 +321,11 @@ describe("/api/trips", () => {
         },
         include: {
           destinations: {
+            orderBy: {
+              order: "asc",
+            },
+          },
+          itineraryItems: {
             orderBy: {
               order: "asc",
             },

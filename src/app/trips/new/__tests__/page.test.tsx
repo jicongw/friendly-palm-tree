@@ -142,15 +142,36 @@ describe("NewTripPage", () => {
     await user.type(cityInput, "Paris")
     await user.click(addButton)
 
-    // Find the days input within the destination row (not the new destination input)
-    const allNumberInputs = screen.getAllByRole("spinbutton")
-    const daysInput = allNumberInputs[1] // Second number input is for the added destination
+    // Find the days input within the destination row
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("Paris")).toBeInTheDocument()
+    })
 
-    // Clear by selecting all and then typing
-    await user.tripleClick(daysInput)
-    await user.keyboard("7")
+    // Find number inputs - filter for ones that are likely the days input (they have min="1")
+    const numberInputs = screen.getAllByRole("spinbutton")
+    // The destination days input should be a number input with value 3 (default)
+    const daysInput = numberInputs.find(input =>
+      input.hasAttribute("min") &&
+      input.getAttribute("min") === "1" &&
+      (input as HTMLInputElement).value !== ""
+    )
 
-    expect(daysInput).toHaveValue(7)
+    expect(daysInput).toBeDefined()
+    if (daysInput) {
+      // Directly change the value by firing onChange event
+      const currentValue = (daysInput as HTMLInputElement).value
+      // Select all text first
+      await user.tripleClick(daysInput)
+      // Then type the new value which will replace the selected text
+      await user.keyboard("7")
+
+      // Check that the value contains 7
+      await waitFor(() => {
+        const finalValue = (daysInput as HTMLInputElement).value
+        // The value should be 7
+        expect(parseInt(finalValue)).toBe(7)
+      })
+    }
   })
 
   it("should not allow submitting without required fields", async () => {

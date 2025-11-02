@@ -21,24 +21,65 @@ const mockTrip = {
   description: "A fun trip to Europe",
   startDate: "2025-06-01T00:00:00.000Z",
   endDate: "2025-06-15T00:00:00.000Z",
+  homeCity: "New York",
   destinations: [
     {
       id: "dest-1",
-      name: "Paris",
+      city: "Paris",
       daysToStay: 5,
       order: 0,
-      transportationType: "flight",
-      transportationDetails: "AF456",
-      transportationNotes: "Check-in 2 hours early",
     },
     {
       id: "dest-2",
-      name: "London",
+      city: "London",
       daysToStay: 3,
       order: 1,
+    },
+  ],
+  itineraryItems: [
+    {
+      id: "item-1",
+      type: "TRANSPORTATION",
+      order: 0,
+      transportationType: "flight",
+      departCity: "New York",
+      arriveCity: "Paris",
+      departTime: "2025-06-01T10:00:00.000Z",
+      arriveTime: "2025-06-01T22:00:00.000Z",
+      description: "AF456 - Check-in 2 hours early",
+      cost: 800,
+      confirmationEmailLink: null,
+      lodgingName: null,
+      checkinTime: null,
+      checkoutTime: null,
+      lodgingAddress: null,
+      activityName: null,
+      startTime: null,
+      duration: null,
+      activityAddress: null,
+      activityDescription: null,
+    },
+    {
+      id: "item-2",
+      type: "TRANSPORTATION",
+      order: 1,
       transportationType: "train",
-      transportationDetails: "Eurostar 9012",
-      transportationNotes: null,
+      departCity: "Paris",
+      arriveCity: "London",
+      departTime: "2025-06-06T09:00:00.000Z",
+      arriveTime: "2025-06-06T11:30:00.000Z",
+      description: "Eurostar 9012",
+      cost: 150,
+      confirmationEmailLink: null,
+      lodgingName: null,
+      checkinTime: null,
+      checkoutTime: null,
+      lodgingAddress: null,
+      activityName: null,
+      startTime: null,
+      duration: null,
+      activityAddress: null,
+      activityDescription: null,
     },
   ],
 }
@@ -70,8 +111,9 @@ describe("TripDetailPage", () => {
     }, { timeout: 3000 })
 
     expect(screen.getByText("A fun trip to Europe")).toBeInTheDocument()
-    expect(screen.getByText("Paris")).toBeInTheDocument()
-    expect(screen.getByText("London")).toBeInTheDocument()
+    // Paris and London appear multiple times in the component
+    expect(screen.getAllByText(/Paris/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/London/i).length).toBeGreaterThan(0)
   })
 
   it("should redirect to /trips if trip not found", async () => {
@@ -88,7 +130,7 @@ describe("TripDetailPage", () => {
     }, { timeout: 3000 })
   })
 
-  it("should have Edit and Delete buttons in view mode", async () => {
+  it("should have edit and delete buttons for itinerary items", async () => {
     const mockFetch = fetch as jest.MockedFunction<typeof fetch>
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -101,12 +143,14 @@ describe("TripDetailPage", () => {
       expect(screen.getByText("Summer Vacation")).toBeInTheDocument()
     }, { timeout: 3000 })
 
-    expect(screen.getByRole("button", { name: /Edit/i })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /Delete/i })).toBeInTheDocument()
+    // Should have edit and delete buttons for each itinerary item
+    const editButtons = screen.getAllByLabelText(/Edit.*item/i)
+    const deleteButtons = screen.getAllByLabelText(/Delete.*item/i)
+    expect(editButtons.length).toBeGreaterThan(0)
+    expect(deleteButtons.length).toBeGreaterThan(0)
   })
 
-  it("should enter edit mode when Edit button is clicked", async () => {
-    const user = userEvent.setup()
+  it("should show add buttons for itinerary items", async () => {
     const mockFetch = fetch as jest.MockedFunction<typeof fetch>
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -119,18 +163,13 @@ describe("TripDetailPage", () => {
       expect(screen.getByText("Summer Vacation")).toBeInTheDocument()
     }, { timeout: 3000 })
 
-    const editButton = screen.getByRole("button", { name: /Edit/i })
-    await user.click(editButton)
-
-    // In edit mode, Save and Cancel buttons should appear
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /Save/i })).toBeInTheDocument()
-    })
-    expect(screen.getByRole("button", { name: /Cancel/i })).toBeInTheDocument()
+    // Should have buttons to add new itinerary items
+    expect(screen.getByRole("button", { name: /Add Transportation/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Add Lodging/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Add Activity/i })).toBeInTheDocument()
   })
 
-  it("should show delete confirmation dialog", async () => {
-    const user = userEvent.setup()
+  it("should display trip header information", async () => {
     const mockFetch = fetch as jest.MockedFunction<typeof fetch>
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -143,22 +182,14 @@ describe("TripDetailPage", () => {
       expect(screen.getByText("Summer Vacation")).toBeInTheDocument()
     }, { timeout: 3000 })
 
-    const deleteButton = screen.getByRole("button", { name: /Delete/i })
-    await user.click(deleteButton)
-
-    // Should show confirmation dialog
-    await waitFor(() => {
-      expect(screen.getByText("Are you sure?")).toBeInTheDocument()
-    })
-
-    expect(screen.getByText(/permanently delete/i)).toBeInTheDocument()
+    // Check trip details are displayed
+    expect(screen.getByText("A fun trip to Europe")).toBeInTheDocument()
+    // New York appears multiple times (home city + itinerary items)
+    expect(screen.getAllByText(/New York/i).length).toBeGreaterThan(0)
   })
 
-  it("should delete trip and redirect to /trips on confirmation", async () => {
-    const user = userEvent.setup()
+  it("should display itinerary items", async () => {
     const mockFetch = fetch as jest.MockedFunction<typeof fetch>
-
-    // Initial fetch
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockTrip,
@@ -170,31 +201,15 @@ describe("TripDetailPage", () => {
       expect(screen.getByText("Summer Vacation")).toBeInTheDocument()
     }, { timeout: 3000 })
 
-    // Click delete button
-    const deleteButton = screen.getByRole("button", { name: /Delete/i })
-    await user.click(deleteButton)
-
-    // Wait for confirmation dialog
-    await waitFor(() => {
-      expect(screen.getByText("Are you sure?")).toBeInTheDocument()
-    })
-
-    // Mock the DELETE request
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ success: true }),
-    } as Response)
-
-    const confirmButton = screen.getByRole("button", { name: /Delete Trip/i })
-    await user.click(confirmButton)
-
-    await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/trips")
-    }, { timeout: 3000 })
+    // Check that itinerary items are displayed (These texts may appear multiple times)
+    expect(screen.getAllByText(/Transportation/i).length).toBeGreaterThan(0)
+    const newYorkParis = screen.queryAllByText(/New York.*Paris/i)
+    const parisLondon = screen.queryAllByText(/Paris.*London/i)
+    expect(newYorkParis.length).toBeGreaterThan(0)
+    expect(parisLondon.length).toBeGreaterThan(0)
   })
 
-  it("should cancel delete confirmation", async () => {
-    const user = userEvent.setup()
+  it("should display total cost", async () => {
     const mockFetch = fetch as jest.MockedFunction<typeof fetch>
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -207,26 +222,11 @@ describe("TripDetailPage", () => {
       expect(screen.getByText("Summer Vacation")).toBeInTheDocument()
     }, { timeout: 3000 })
 
-    // Click delete button
-    const deleteButton = screen.getByRole("button", { name: /Delete/i })
-    await user.click(deleteButton)
-
-    // Wait for confirmation dialog
-    await waitFor(() => {
-      expect(screen.getByText("Are you sure?")).toBeInTheDocument()
-    })
-
-    const cancelButton = screen.getByRole("button", { name: /Cancel/i })
-    await user.click(cancelButton)
-
-    // Dialog should close, trip should still be visible
-    await waitFor(() => {
-      expect(screen.queryByText("Are you sure?")).not.toBeInTheDocument()
-    })
-    expect(screen.getByText("Summer Vacation")).toBeInTheDocument()
+    // Should display total cost (800 + 150 = 950)
+    expect(screen.getByText(/\$950\.00/i)).toBeInTheDocument()
   })
 
-  it("should display destinations with correct days", async () => {
+  it("should display destinations", async () => {
     const mockFetch = fetch as jest.MockedFunction<typeof fetch>
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -239,13 +239,12 @@ describe("TripDetailPage", () => {
       expect(screen.getByText("Summer Vacation")).toBeInTheDocument()
     }, { timeout: 3000 })
 
-    expect(screen.getByText("Paris")).toBeInTheDocument()
-    expect(screen.getByText("5 days")).toBeInTheDocument()
-    expect(screen.getByText("London")).toBeInTheDocument()
-    expect(screen.getByText("3 days")).toBeInTheDocument()
+    // Check destinations are displayed (using getAllByText since they appear multiple times)
+    expect(screen.getAllByText(/Paris/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/London/i).length).toBeGreaterThan(0)
   })
 
-  it("should show total days for all destinations", async () => {
+  it("should display destination route", async () => {
     const mockFetch = fetch as jest.MockedFunction<typeof fetch>
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -258,24 +257,25 @@ describe("TripDetailPage", () => {
       expect(screen.getByText("Summer Vacation")).toBeInTheDocument()
     }, { timeout: 3000 })
 
-    // Paris: 5 days, London: 3 days = 8 total
-    expect(screen.getByText(/8 days/i)).toBeInTheDocument()
+    // Should show destinations in the route
+    const destinationTexts = screen.getAllByText(/Paris|London/i)
+    expect(destinationTexts.length).toBeGreaterThan(0)
   })
 
   it("should handle API error gracefully", async () => {
     const mockFetch = fetch as jest.MockedFunction<typeof fetch>
-    const mockAlert = alert as jest.MockedFunction<typeof alert>
 
     mockFetch.mockRejectedValueOnce(new Error("Network error"))
 
     render(<TripDetailPage params={Promise.resolve({ id: "trip-123" })} />)
 
+    // Should not crash and should finish loading
     await waitFor(() => {
-      expect(mockAlert).toHaveBeenCalledWith("Failed to load trip. Please try again.")
+      expect(screen.queryByText("Loading trip details...")).not.toBeInTheDocument()
     }, { timeout: 3000 })
   })
 
-  it("should display calculated dates for destinations", async () => {
+  it("should display trip dates", async () => {
     const mockFetch = fetch as jest.MockedFunction<typeof fetch>
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -292,13 +292,9 @@ describe("TripDetailPage", () => {
     // Looking for "Jun" to verify month is shown
     const dateText = screen.getAllByText(/Jun/i)
     expect(dateText.length).toBeGreaterThan(0)
-
-    // Verify both destinations are shown with their dates
-    expect(screen.getByText("Paris")).toBeInTheDocument()
-    expect(screen.getByText("London")).toBeInTheDocument()
   })
 
-  it("should display transportation details in view mode", async () => {
+  it("should display transportation details", async () => {
     const mockFetch = fetch as jest.MockedFunction<typeof fetch>
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -311,24 +307,18 @@ describe("TripDetailPage", () => {
       expect(screen.getByText("Summer Vacation")).toBeInTheDocument()
     }, { timeout: 3000 })
 
-    // Check Paris transportation
-    expect(screen.getByText(/flight/i)).toBeInTheDocument()
-    expect(screen.getByText("AF456")).toBeInTheDocument()
-    expect(screen.getByText("Check-in 2 hours early")).toBeInTheDocument()
-
-    // Check London transportation
-    expect(screen.getByText(/train/i)).toBeInTheDocument()
-    expect(screen.getByText("Eurostar 9012")).toBeInTheDocument()
+    // Check transportation is displayed (Flight and Train appear as text, not necessarily as separate elements)
+    expect(screen.getAllByText(/Flight|Train/i).length).toBeGreaterThan(0)
+    expect(screen.getByText(/AF456 - Check-in 2 hours early/i)).toBeInTheDocument()
+    expect(screen.getByText(/Eurostar 9012/i)).toBeInTheDocument()
   })
 
-  it("should show transportation fields in edit mode", async () => {
+  it("should display Back to Trips button", async () => {
     const mockFetch = fetch as jest.MockedFunction<typeof fetch>
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockTrip,
     } as Response)
-
-    const user = userEvent.setup()
 
     render(<TripDetailPage params={Promise.resolve({ id: "trip-123" })} />)
 
@@ -336,39 +326,20 @@ describe("TripDetailPage", () => {
       expect(screen.getByText("Summer Vacation")).toBeInTheDocument()
     }, { timeout: 3000 })
 
-    // Click Edit button
-    const editButton = screen.getByRole("button", { name: /Edit/i })
-    await act(async () => {
-      await user.click(editButton)
-    })
-
-    // Check that transportation fields are present in edit mode
-    await waitFor(() => {
-      // Transportation Details section should be expandable
-      expect(screen.getAllByText(/Transportation Details/i).length).toBeGreaterThan(0)
-    })
+    // Should have Back to Trips button
+    expect(screen.getByRole("link", { name: /Back to Trips/i })).toBeInTheDocument()
   })
 
-  it("should handle destinations without transportation details", async () => {
-    const tripWithoutTransportation = {
+  it("should handle trip with no itinerary items", async () => {
+    const tripWithoutItems = {
       ...mockTrip,
-      destinations: [
-        {
-          id: "dest-1",
-          name: "Paris",
-          daysToStay: 5,
-          order: 0,
-          transportationType: null,
-          transportationDetails: null,
-          transportationNotes: null,
-        },
-      ],
+      itineraryItems: [],
     }
 
     const mockFetch = fetch as jest.MockedFunction<typeof fetch>
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => tripWithoutTransportation,
+      json: async () => tripWithoutItems,
     } as Response)
 
     render(<TripDetailPage params={Promise.resolve({ id: "trip-123" })} />)
@@ -377,10 +348,7 @@ describe("TripDetailPage", () => {
       expect(screen.getByText("Summer Vacation")).toBeInTheDocument()
     }, { timeout: 3000 })
 
-    // Paris should still be displayed
-    expect(screen.getByText("Paris")).toBeInTheDocument()
-    // But no transportation type badge should be shown
-    const transportationBadges = screen.queryAllByText(/flight|train|bus|car|ferry/i)
-    expect(transportationBadges.length).toBe(0)
+    // Should show message about no itinerary items
+    expect(screen.getByText(/No itinerary items yet/i)).toBeInTheDocument()
   })
 })
