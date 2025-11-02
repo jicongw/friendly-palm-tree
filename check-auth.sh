@@ -1,19 +1,15 @@
 #!/bin/bash
-# Find psql command - check PATH first, then common Homebrew locations
+# Find psql command - check PATH first, then PostgreSQL 16 location
 PSQL_CMD=""
 
 if command -v psql >/dev/null 2>&1; then
   PSQL_CMD="psql"
 elif [ -f "/opt/homebrew/opt/postgresql@16/bin/psql" ]; then
   PSQL_CMD="/opt/homebrew/opt/postgresql@16/bin/psql"
-elif [ -f "/opt/homebrew/opt/postgresql@15/bin/psql" ]; then
-  PSQL_CMD="/opt/homebrew/opt/postgresql@15/bin/psql"
 elif [ -f "/usr/local/opt/postgresql@16/bin/psql" ]; then
   PSQL_CMD="/usr/local/opt/postgresql@16/bin/psql"
-elif [ -f "/usr/local/bin/psql" ]; then
-  PSQL_CMD="/usr/local/bin/psql"
 else
-  echo "Error: psql command not found. Please install PostgreSQL."
+  echo "Error: psql command not found. Please install PostgreSQL 16."
   exit 1
 fi
 
