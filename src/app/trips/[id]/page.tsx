@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,12 +35,17 @@ import {
   MapPinIcon,
   DollarSignIcon,
   ClockIcon,
-  HomeIcon
+  HomeIcon,
+  MenuIcon
 } from "lucide-react"
 import { format } from "date-fns"
 import Link from "next/link"
 import { ItineraryType } from "@prisma/client"
 import { toast } from "sonner"
+import { ItinerarySidebar } from "@/components/ItinerarySidebar"
+
+// Constants
+const LG_BREAKPOINT = 1024 // Tailwind's lg breakpoint
 
 interface ItineraryItem {
   id: string
@@ -130,6 +135,12 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   const [editingItem, setEditingItem] = useState<ItineraryItem | null>(null)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
+
+  // Sidebar state
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [activeItemId, setActiveItemId] = useState<string | null>(null)
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({})
+
   // Unwrap params
   useEffect(() => {
     params.then(({ id }) => setTripId(id))
@@ -419,7 +430,11 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   const renderTransportationItem = (item: ItineraryItem) => (
-    <Card key={item.id} className="border-l-4 border-l-blue-500">
+    <Card
+      key={item.id}
+      ref={(el) => { itemRefs.current[item.id] = el }}
+      className="border-l-4 border-l-blue-500 scroll-mt-4"
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
@@ -479,7 +494,11 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   )
 
   const renderLodgingItem = (item: ItineraryItem) => (
-    <Card key={item.id} className="border-l-4 border-l-purple-500">
+    <Card
+      key={item.id}
+      ref={(el) => { itemRefs.current[item.id] = el }}
+      className="border-l-4 border-l-purple-500 scroll-mt-4"
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
@@ -542,7 +561,11 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   )
 
   const renderActivityItem = (item: ItineraryItem) => (
-    <Card key={item.id} className="border-l-4 border-l-green-500">
+    <Card
+      key={item.id}
+      ref={(el) => { itemRefs.current[item.id] = el }}
+      className="border-l-4 border-l-green-500 scroll-mt-4"
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
@@ -619,6 +642,18 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     return trip.itineraryItems.reduce((sum, item) => sum + (item.cost || 0), 0)
   }
 
+  const handleSidebarItemClick = useCallback((itemId: string) => {
+    const element = itemRefs.current[itemId]
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" })
+      setActiveItemId(itemId)
+      // On mobile, close the sidebar after clicking
+      if (window.innerWidth < LG_BREAKPOINT) {
+        setSidebarOpen(false)
+      }
+    }
+  }, [])
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center">
@@ -640,6 +675,14 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="lg:hidden"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+              >
+                <MenuIcon className="h-5 w-5" />
+              </Button>
               <MapIcon className="h-8 w-8 text-blue-600" />
               <h1 className="text-2xl font-bold text-gray-900">Trip Planner</h1>
             </div>
@@ -653,8 +696,17 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex">
+        <ItinerarySidebar
+          items={trip.itineraryItems}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          activeItemId={activeItemId}
+          onItemClick={handleSidebarItemClick}
+        />
+
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto space-y-6">
           {/* Trip Header */}
           <Card>
             <CardHeader>
@@ -725,6 +777,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
           </div>
         </div>
       </main>
+      </div>
 
       {/* Add Activity Dialog */}
       <Dialog open={showActivityDialog} onOpenChange={setShowActivityDialog}>
