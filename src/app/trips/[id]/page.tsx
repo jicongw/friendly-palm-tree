@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,6 +43,9 @@ import Link from "next/link"
 import { ItineraryType } from "@prisma/client"
 import { toast } from "sonner"
 import { ItinerarySidebar } from "@/components/ItinerarySidebar"
+
+// Constants
+const LG_BREAKPOINT = 1024 // Tailwind's lg breakpoint
 
 interface ItineraryItem {
   id: string
@@ -136,6 +139,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   // Sidebar state
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [activeItemId, setActiveItemId] = useState<string | null>(null)
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   // Unwrap params
   useEffect(() => {
@@ -426,7 +430,11 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   const renderTransportationItem = (item: ItineraryItem) => (
-    <Card key={item.id} id={`item-${item.id}`} className="border-l-4 border-l-blue-500 scroll-mt-4">
+    <Card
+      key={item.id}
+      ref={(el) => { itemRefs.current[item.id] = el }}
+      className="border-l-4 border-l-blue-500 scroll-mt-4"
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
@@ -486,7 +494,11 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   )
 
   const renderLodgingItem = (item: ItineraryItem) => (
-    <Card key={item.id} id={`item-${item.id}`} className="border-l-4 border-l-purple-500 scroll-mt-4">
+    <Card
+      key={item.id}
+      ref={(el) => { itemRefs.current[item.id] = el }}
+      className="border-l-4 border-l-purple-500 scroll-mt-4"
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
@@ -549,7 +561,11 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
   )
 
   const renderActivityItem = (item: ItineraryItem) => (
-    <Card key={item.id} id={`item-${item.id}`} className="border-l-4 border-l-green-500 scroll-mt-4">
+    <Card
+      key={item.id}
+      ref={(el) => { itemRefs.current[item.id] = el }}
+      className="border-l-4 border-l-green-500 scroll-mt-4"
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
@@ -626,17 +642,17 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
     return trip.itineraryItems.reduce((sum, item) => sum + (item.cost || 0), 0)
   }
 
-  const handleSidebarItemClick = (itemId: string) => {
-    const element = document.getElementById(`item-${itemId}`)
+  const handleSidebarItemClick = useCallback((itemId: string) => {
+    const element = itemRefs.current[itemId]
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "center" })
       setActiveItemId(itemId)
       // On mobile, close the sidebar after clicking
-      if (window.innerWidth < 1024) {
+      if (window.innerWidth < LG_BREAKPOINT) {
         setSidebarOpen(false)
       }
     }
-  }
+  }, [])
 
   if (isLoading) {
     return (

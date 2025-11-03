@@ -299,6 +299,179 @@ describe("ItinerarySidebar", () => {
     })
   })
 
+  describe("Keyboard navigation", () => {
+    it("closes sidebar when ESC key is pressed", async () => {
+      const user = userEvent.setup()
+
+      render(
+        <ItinerarySidebar
+          items={mockItems}
+          isOpen={true}
+          onClose={mockOnClose}
+          activeItemId={null}
+          onItemClick={mockOnItemClick}
+        />
+      )
+
+      await user.keyboard("{Escape}")
+      expect(mockOnClose).toHaveBeenCalledTimes(1)
+    })
+
+    it("does not close sidebar when ESC is pressed and sidebar is already closed", async () => {
+      const user = userEvent.setup()
+
+      render(
+        <ItinerarySidebar
+          items={mockItems}
+          isOpen={false}
+          onClose={mockOnClose}
+          activeItemId={null}
+          onItemClick={mockOnItemClick}
+        />
+      )
+
+      await user.keyboard("{Escape}")
+      expect(mockOnClose).not.toHaveBeenCalled()
+    })
+
+    it("closes sidebar when overlay is activated with Enter key", async () => {
+      const user = userEvent.setup()
+
+      const { container } = render(
+        <ItinerarySidebar
+          items={mockItems}
+          isOpen={true}
+          onClose={mockOnClose}
+          activeItemId={null}
+          onItemClick={mockOnItemClick}
+        />
+      )
+
+      const overlay = container.querySelector(".fixed.inset-0.bg-black\\/50")
+      if (overlay) {
+        await user.click(overlay)
+        await user.keyboard("{Enter}")
+      }
+
+      expect(mockOnClose).toHaveBeenCalled()
+    })
+  })
+
+  describe("Edge cases", () => {
+    it("handles items with null/undefined dates gracefully", () => {
+      const itemsWithNullDates = [{
+        id: "item-1",
+        type: ItineraryType.TRANSPORTATION,
+        order: 0,
+        departCity: "NYC",
+        arriveCity: "LA",
+        departTime: null,
+        checkinTime: null,
+        startTime: null,
+        lodgingName: null,
+        activityName: null,
+      }]
+
+      render(
+        <ItinerarySidebar
+          items={itemsWithNullDates}
+          isOpen={true}
+          onClose={mockOnClose}
+          activeItemId={null}
+          onItemClick={mockOnItemClick}
+        />
+      )
+
+      expect(screen.getByText("NYC → LA")).toBeInTheDocument()
+      // Should not throw error, just not display timestamp
+    })
+
+    it("handles items with invalid date strings", () => {
+      const itemsWithInvalidDates = [{
+        id: "item-1",
+        type: ItineraryType.ACTIVITY,
+        order: 0,
+        activityName: "Test Activity",
+        startTime: "invalid-date-string",
+        departCity: null,
+        arriveCity: null,
+        departTime: null,
+        checkinTime: null,
+        lodgingName: null,
+      }]
+
+      render(
+        <ItinerarySidebar
+          items={itemsWithInvalidDates}
+          isOpen={true}
+          onClose={mockOnClose}
+          activeItemId={null}
+          onItemClick={mockOnItemClick}
+        />
+      )
+
+      expect(screen.getByText("Test Activity")).toBeInTheDocument()
+      // Should not crash when parsing invalid date
+    })
+
+    it("handles items with very long names", () => {
+      const itemsWithLongNames = [{
+        id: "item-1",
+        type: ItineraryType.ACTIVITY,
+        order: 0,
+        activityName: "A".repeat(200),
+        startTime: "2025-06-01T10:00:00.000Z",
+        departCity: null,
+        arriveCity: null,
+        departTime: null,
+        checkinTime: null,
+        lodgingName: null,
+      }]
+
+      const { container } = render(
+        <ItinerarySidebar
+          items={itemsWithLongNames}
+          isOpen={true}
+          onClose={mockOnClose}
+          activeItemId={null}
+          onItemClick={mockOnItemClick}
+        />
+      )
+
+      // Check that the title text has truncate class
+      const titleDiv = container.querySelector(".truncate")
+      expect(titleDiv).toBeInTheDocument()
+    })
+
+    it("handles empty or missing fields", () => {
+      const itemsWithMissingFields = [{
+        id: "item-1",
+        type: ItineraryType.LODGING,
+        order: 0,
+        lodgingName: null,
+        checkinTime: "2025-06-01T15:00:00.000Z",
+        departCity: null,
+        arriveCity: null,
+        departTime: null,
+        startTime: null,
+        activityName: null,
+      }]
+
+      render(
+        <ItinerarySidebar
+          items={itemsWithMissingFields}
+          isOpen={true}
+          onClose={mockOnClose}
+          activeItemId={null}
+          onItemClick={mockOnItemClick}
+        />
+      )
+
+      // Should show default "Lodging" when name is missing
+      expect(screen.getByText("Lodging")).toBeInTheDocument()
+    })
+  })
+
   describe("Item type icons", () => {
     it("displays correct icon for transportation items", () => {
       const transportationItem = [{

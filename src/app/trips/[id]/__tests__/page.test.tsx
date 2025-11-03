@@ -417,12 +417,6 @@ describe("TripDetailPage", () => {
         json: async () => mockTrip,
       } as Response)
 
-      // Mock getElementById
-      const mockElement = document.createElement('div')
-      mockElement.id = 'item-item-1'
-      const getElementByIdSpy = jest.spyOn(document, 'getElementById')
-      getElementByIdSpy.mockReturnValue(mockElement)
-
       render(<TripDetailPage params={Promise.resolve({ id: "trip-123" })} />)
 
       await waitFor(() => {
@@ -438,14 +432,12 @@ describe("TripDetailPage", () => {
       if (transportButton) {
         await user.click(transportButton)
 
-        // scrollIntoView should have been called
+        // scrollIntoView should have been called via ref
         expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
       }
-
-      getElementByIdSpy.mockRestore()
     })
 
-    it("should display items with IDs for scrolling", async () => {
+    it("should display items with refs for scrolling", async () => {
       const mockFetch = fetch as jest.MockedFunction<typeof fetch>
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -458,9 +450,9 @@ describe("TripDetailPage", () => {
         expect(screen.getByText("Summer Vacation")).toBeInTheDocument()
       }, { timeout: 3000 })
 
-      // Check that itinerary items have IDs for scrolling
-      const itemWithId = container.querySelector('[id^="item-"]')
-      expect(itemWithId).toBeInTheDocument()
+      // Check that itinerary items are rendered with scroll-mt-4 class (used for smooth scrolling)
+      const itemCards = container.querySelectorAll('.scroll-mt-4')
+      expect(itemCards.length).toBeGreaterThan(0)
     })
 
     it("should show 'No items yet' in sidebar when no itinerary items", async () => {
@@ -500,7 +492,7 @@ describe("TripDetailPage", () => {
       }, { timeout: 3000 })
 
       // Check that items have scroll-mt-4 class for proper scroll offset
-      const itemCards = container.querySelectorAll('[id^="item-"]')
+      const itemCards = container.querySelectorAll('.border-l-4')
       expect(itemCards.length).toBeGreaterThan(0)
 
       itemCards.forEach(card => {
