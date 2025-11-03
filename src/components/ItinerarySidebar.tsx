@@ -142,12 +142,15 @@ export function ItinerarySidebar({ items, isOpen, onClose, activeItemId, onItemC
       {/* Sidebar */}
       <aside
         aria-label="Trip itinerary navigation"
+        style={{
+          top: `${HEADER_HEIGHT}px`,
+          height: `calc(100vh - ${HEADER_HEIGHT}px)`,
+        }}
         className={cn(
           "fixed lg:sticky left-0 z-20 overflow-y-auto",
           "w-64 md:w-72 lg:w-64 bg-white border-r",
           "shadow-lg lg:shadow-none",
           "transition-transform duration-300 ease-in-out",
-          `top-[${HEADER_HEIGHT}px] h-[calc(100vh-${HEADER_HEIGHT}px)]`,
           isOpen ? "translate-x-0" : "-translate-x-full",
           "lg:translate-x-0"
         )}
